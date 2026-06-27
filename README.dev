@@ -1,0 +1,49 @@
+# Dokkhota — Developer Setup (Sprint 1)
+
+This file describes the minimal steps to run the project locally for Sprint 1 (backend + frontend) on Windows.
+
+1) Prerequisites
+- Node.js 18+ and npm
+- MongoDB (local) OR a MongoDB Atlas cluster
+
+2) Prepare backend env
+- Copy the example: create `backend/.env` from `backend/.env.example` and fill values (especially `JWT_SECRET`).
+
+3) Start or install MongoDB (local)
+- If MongoDB is installed as a Windows service, start it:
+
+  net start MongoDB
+
+- Or run `mongod` manually from your MongoDB installation path.
+- If you prefer Atlas, set `MONGO_URI` in `backend/.env` to your Atlas connection string.
+
+4) Install dependencies and run
+- Backend:
+
+  cd backend
+  npm install
+  npm run dev
+
+- Frontend:
+
+  cd ../frontend
+  npm install
+  npm run dev
+
+Notes & troubleshooting
+- If backend shows SRV/DNS errors connecting to Atlas (ENOTFOUND _mongodb._tcp...), the app will automatically try the local MongoDB URI (`MONGO_LOCAL_URI`) as a fallback.
+- The `frontend/package.json` `simple-peer` entry was pinned to a compatible version (`^9.11.1`). If you encounter issues, try clearing npm cache:
+
+  npm cache clean --force
+  npm install
+
+- If `vite` is not recognized, ensure `npm install` completed successfully in `frontend` and run `npm run dev` from the `frontend` folder.
+
+Creating an admin user (development)
+- You can create an admin directly in MongoDB using a script or Mongo shell. Example (Mongo shell):
+
+  use dokkhota
+  db.users.insertOne({ name: 'Admin', email: 'admin@example.com', passwordHash: '<bcrypt-hash>', role: 'admin', creditBalance: 0, createdAt: new Date() })
+
+Git commit message to use for these changes
+- [FR-00] Fix dev environment: MongoDB fallback & frontend dependency pin

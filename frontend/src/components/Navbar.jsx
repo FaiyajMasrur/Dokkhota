@@ -1,9 +1,15 @@
 // Navbar component for Dokkhota navigation and auth-aware links
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/dashboard');
+  };
 
   return (
     <nav className='bg-white border-b shadow-sm'>
@@ -19,7 +25,7 @@ const Navbar = () => {
               <Link to='/dashboard' className='text-gray-600 hover:text-green-700'>Dashboard</Link>
               <Link to={`/profile/${user?.id || user?._id}`} className='text-gray-600 hover:text-green-700'>My profile</Link>
               <Link to='/create-listing' className='text-gray-600 hover:text-green-700'>Create Listing</Link>
-              <button onClick={logout} className='text-red-600 hover:text-red-800'>Logout</button>
+              <button onClick={handleLogout} className='text-red-600 hover:text-red-800'>Logout</button>
             </>
           ) : (
             <>

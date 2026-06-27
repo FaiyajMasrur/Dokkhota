@@ -21,6 +21,17 @@ const socketHandler = require('./sockets/socketHandler');
 
 connectDB();
 
+// Serve uploaded files (local fallback for avatars)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Seed initial categories if needed
+try {
+  const { seedCategories } = require('./seedCategories');
+  seedCategories().catch((e) => console.warn('Category seeder failed:', e.message));
+} catch (e) {
+  // ignore if seeder not present
+}
+
 const app = express();
 const server = http.createServer(app);
 

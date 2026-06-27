@@ -14,6 +14,8 @@ const ProfileEditPage = () => {
     languages: '',
     skillsOffered: '',
   });
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -26,6 +28,7 @@ const ProfileEditPage = () => {
         languages: (user.languages || []).join(', '),
         skillsOffered: (user.skillsOffered || []).map((skill) => `${skill.title} (${skill.category})`).join(', '),
       });
+      setAvatarPreview(user.avatarUrl || '');
     }
   }, [user]);
 
@@ -44,6 +47,13 @@ const ProfileEditPage = () => {
     }
 
     try {
+      // upload avatar first if present
+      if (avatarFile) {
+        const uploadResp = await userService.uploadAvatar(avatarFile, accessToken);
+        if (uploadResp.data?.success) {
+          profilePayload.avatarUrl = uploadResp.data.avatarUrl;
+        }
+      }
       const profilePayload = {
         name: form.name,
         city: form.city,
@@ -100,6 +110,11 @@ const ProfileEditPage = () => {
             <div>
               <label className='block mb-1 font-medium'>Languages (comma separated)</label>
               <input value={form.languages} onChange={handleChange('languages')} className='w-full border rounded px-4 py-3' />
+            </div>
+            <div>
+              <label className='block mb-1 font-medium'>Profile picture</label>
+              {avatarPreview && <img src={avatarPreview} alt='avatar' className='w-24 h-24 object-cover rounded-full mb-2' />}
+              <input type='file' accept='image/*' onChange={(e) => { setAvatarFile(e.target.files[0] || null); setAvatarPreview(e.target.files[0] ? URL.createObjectURL(e.target.files[0]) : ''); }} />
             </div>
             <div>
               <label className='block mb-1 font-medium'>Skills Offered (e.g. JavaScript (Programming), Graphic Design (Creative))</label>

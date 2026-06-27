@@ -1,22 +1,38 @@
+<div align="center">
+
 # Dokkhota
 
-Dokkhota is a peer-to-peer skill exchange platform (backend + frontend).
+**A peer-to-peer skill exchange platform**  
+Connect, teach, and learn through a credits-based marketplace.
 
-## Repo layout
+![Express](https://img.shields.io/badge/Express-API-blue?style=flat-square)
+![React](https://img.shields.io/badge/React-Vite-61DAFB?style=flat-square)
+![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-green?style=flat-square)
+![License](https://img.shields.io/badge/license-MIT-lightgrey?style=flat-square)
 
-- `backend/` — Express API, Mongoose models, auth, email, bookings, credits
-- `frontend/` — Vite + React app (pages for register, login, profile, listings)
+</div>
 
-## Quickstart (development)
+---
 
-1. Copy env examples and set secrets:
+## Repository layout
+
+| Directory | Contents |
+|-----------|----------|
+| `backend/` | Express API — Mongoose models, JWT auth, email delivery, bookings, credits |
+| `frontend/` | Vite + React — register, login, profile, skill listings |
+
+---
+
+## Quickstart
+
+### 1. Configure environment
 
 ```bash
 cp backend/.env.example backend/.env
-# Edit backend/.env to set MONGO_URI, JWT_SECRET, EMAIL_* etc.
+# Fill in MONGO_URI, JWT_SECRET, EMAIL_*, and CLIENT_URL
 ```
 
-2. Start backend (from repo root):
+### 2. Start the backend
 
 ```bash
 cd backend
@@ -24,7 +40,7 @@ npm install
 npm run dev
 ```
 
-3. Start frontend (in a separate terminal):
+### 3. Start the frontend *(separate terminal)*
 
 ```bash
 cd frontend
@@ -32,26 +48,25 @@ npm install
 npm run dev
 ```
 
-## Important environment variables
-- `MONGO_URI` — MongoDB connection string (Atlas recommended)
-- `JWT_SECRET`, `JWT_REFRESH_SECRET` — strong random secrets
-- `CLIENT_URL` — frontend origin used for CORS and reset links
-- `EMAIL_USER`, `EMAIL_PASS`, `EMAIL_HOST`, `EMAIL_PORT` — SMTP settings
-- Set `DISABLE_EMAIL=true` during local development to preview OTPs
+---
 
-If using Gmail for SMTP, enable 2FA and create an App Password to use as `EMAIL_PASS`.
+## Environment variables
 
-## Features implemented
-- User registration with OTP email verification
-- JWT access + refresh tokens, auth and role middleware
-- Password reset via email token (1 hour expiry)
-- Skill listing CRUD + availability schedule
-- Starter credits awarded on registration
-- Basic React frontend pages (register, login, profile, create listing)
+| Variable | Description |
+|----------|-------------|
+| `MONGO_URI` | MongoDB connection string (Atlas recommended) |
+| `JWT_SECRET` / `JWT_REFRESH_SECRET` | Strong random secrets for access and refresh tokens |
+| `CLIENT_URL` | Frontend origin — used for CORS and password-reset links |
+| `EMAIL_USER`, `EMAIL_PASS`, `EMAIL_HOST`, `EMAIL_PORT` | SMTP credentials. For Gmail, enable 2FA and use an App Password |
+| `DISABLE_EMAIL` | Set to `true` locally to print OTPs to the console instead of sending email |
 
-## Next steps / checks
-- Verify SMTP by registering a user and checking email delivery (or preview when `DISABLE_EMAIL=true`).
-- Ensure `.env` contains production secrets and never commit real secrets.
+> **Security:** Never commit real secrets. Keep `.env` in `.gitignore`.
 
-## License
-MIT
+---
+
+## Features
+
+- [x] User registration with OTP email verification
+- [x] JWT access + refresh tokens with auth and role middleware
+- [x] Password reset via email token (1-hour expiry)
+- [x] Skill listing CRUD with availability

@@ -1,16 +1,16 @@
 // User routes for Dokkhota profile management
+const path = require('path');
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
+const upload = multer({ dest: path.join(__dirname, '../uploads') });
 const {
   getUserProfile,
   updateProfile,
   updateSkillsOffered,
+  uploadAvatar,
 } = require('../controllers/userController');
-
-const { uploadAvatar } = require('../controllers/userController');
 
 router.get('/:userId/profile', getUserProfile);
 router.patch('/profile', authMiddleware, updateProfile);

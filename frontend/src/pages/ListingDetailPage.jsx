@@ -1,10 +1,12 @@
 // Skill listing detail page for Dokkhota showing listing details and provider info
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext.jsx';
 import skillService from '../services/skillService.js';
 
 const ListingDetailPage = () => {
   const { listingId } = useParams();
+  const { isAuthenticated } = useAuth();
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -98,7 +100,12 @@ const ListingDetailPage = () => {
                   <p className='text-sm text-gray-500'>Session fee</p>
                   <p className='text-2xl font-bold'>{listing.creditCost} SC</p>
                 </div>
-                <button className='w-full bg-green-700 text-white rounded-full px-4 py-3 hover:bg-green-800'>Book session</button>
+                <Link
+                  to={isAuthenticated ? `/book/${listing._id}` : '/login'}
+                  className='block w-full bg-green-700 text-white rounded-full px-4 py-3 hover:bg-green-800 text-center'
+                >
+                  {isAuthenticated ? 'Book session' : 'Log in to book'}
+                </Link>
               </div>
             </aside>
           </div>

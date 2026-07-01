@@ -93,8 +93,11 @@ const DashboardPage = () => {
                 <div className='space-y-3'>
                   {bookings.map((booking) => (
                     <div key={booking._id} className='border rounded-3xl p-4'>
-                      <div className='font-semibold'>{booking.status}</div>
-                      <div className='text-sm text-gray-500'>{booking.preferredDate} at {booking.preferredTime}</div>
+                      <div className='flex items-center justify-between'>
+                        <div className='font-semibold capitalize'>{booking.status}</div>
+                        <div className='text-sm text-gray-500'>{booking.creditCost} SC</div>
+                      </div>
+                      <div className='text-sm text-gray-500 mt-1'>{booking.preferredDate} at {booking.preferredTime}</div>
                       {booking.message && <div className='text-sm text-gray-600 mt-1'>{booking.message}</div>}
                     </div>
                   ))}

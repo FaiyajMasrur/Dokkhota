@@ -85,7 +85,7 @@ const BookSessionPage = () => {
             <section>
               <div className='bg-slate-50 rounded-3xl p-6 mb-6'>
                 <p className='text-sm text-gray-500'>Provider</p>
-                <p className='text-lg font-semibold'>{listing.teacherId}</p>
+                <p className='text-lg font-semibold'>{listing.teacherId?.name || listing.teacherId || 'Teacher'}</p>
                 <p className='text-sm text-gray-500'>Fee: {listing.creditCost} SC</p>
               </div>
               <form className='space-y-4' onSubmit={handleSubmit}>
@@ -103,7 +103,7 @@ const BookSessionPage = () => {
                 </div>
                 <button type='submit' className='w-full bg-green-600 text-white rounded-full px-6 py-3 hover:bg-green-700'>Request booking</button>
               </form>
-              {status && <p className='mt-4 text-green-700'>{status}</p>}
+              {status && <p className={`mt-4 ${status.includes('success') || status.includes('submitted') ? 'text-green-700' : 'text-red-600'}`}>{status}</p>}
             </section>
 
             <aside className='bg-white rounded-3xl p-6 border'>

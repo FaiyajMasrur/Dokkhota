@@ -34,7 +34,18 @@ if (!disableEmail) {
 }
 
 const sendEmail = async (to, subject, html) => {
-  if (disableEmail) {
+  const message = {
+    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+    to,
+    subject,
+    html,
+  };
+
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  if (disableEmail || !transporter) {
+    const logReason = disableEmail ? 'disabled' : 'SMTP transport not configured';
+    console.warn(`Email delivery is ${logReason}. Falling back to console preview.`);
     console.log('=== Dokkhota Email Preview ===');
     console.log('To:', to);
     console.log('Subject:', subject);
@@ -43,19 +54,21 @@ const sendEmail = async (to, subject, html) => {
     return { success: true, preview: true };
   }
 
-  if (!transporter) {
-    const error = new Error('Email delivery is enabled but SMTP transport is not configured.');
-    console.error(error.message);
+  try {
+    return await transporter.sendMail(message);
+  } catch (error) {
+    console.error('Email send failed:', error.message);
+    if (!isProduction) {
+      console.warn('Falling back to console preview because email sending failed in a non-production environment.');
+      console.log('=== Dokkhota Email Preview ===');
+      console.log('To:', to);
+      console.log('Subject:', subject);
+      console.log('HTML:', html);
+      console.log('==============================');
+      return { success: true, preview: true, error: error.message };
+    }
     throw error;
   }
-
-  const message = {
-    from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-    to,
-    subject,
-    html,
-  };
-  return transporter.sendMail(message);
 };
 
 module.exports = { sendEmail };

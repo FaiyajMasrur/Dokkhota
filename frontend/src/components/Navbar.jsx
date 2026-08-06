@@ -23,6 +23,7 @@ const Navbar = () => {
           {isAuthenticated ? (
             <>
               <Link to='/dashboard' className='text-gray-600 hover:text-green-700'>Dashboard</Link>
+              <Link to='/messages' className='text-gray-600 hover:text-green-700'>Messages</Link>
               <Link to={`/profile/${user?.id || user?._id}`} className='text-gray-600 hover:text-green-700'>My profile</Link>
               <Link to='/create-listing' className='text-gray-600 hover:text-green-700'>Create Listing</Link>
               <button onClick={handleLogout} className='text-red-600 hover:text-red-800'>Logout</button>

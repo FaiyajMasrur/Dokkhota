@@ -3,12 +3,14 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import skillService from '../services/skillService.js';
+import reviewService from '../services/reviewService.js';
 
 const ListingDetailPage = () => {
   const { listingId } = useParams();
   const { isAuthenticated } = useAuth();
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
     const loadListing = async () => {
@@ -22,6 +24,16 @@ const ListingDetailPage = () => {
       }
     };
     loadListing();
+  }, [listingId]);
+
+  useEffect(() => {
+    const loadReviews = async () => {
+      try {
+        const res = await reviewService.getListingReviews(listingId);
+        setReviews(res.data.reviews || []);
+      } catch (e) { /* ignore */ }
+    };
+    loadReviews();
   }, [listingId]);
 
   if (loading) {
@@ -108,6 +120,32 @@ const ListingDetailPage = () => {
                 </Link>
               </div>
             </aside>
+          </div>
+
+          {/* ── Reviews Section ──────────────────────────────────── */}
+          <div className='mt-8 bg-white rounded-3xl p-8 shadow-sm'>
+            <h3 className='text-xl font-semibold mb-4'>Reviews ({reviews.length})</h3>
+            {reviews.length > 0 ? (
+              <div className='space-y-4'>
+                {reviews.map((review) => (
+                  <div key={review._id} className='border rounded-2xl p-4'>
+                    <div className='flex items-center justify-between mb-2'>
+                      <div className='flex items-center gap-2'>
+                        <div className='w-8 h-8 rounded-full bg-green-100 text-green-800 flex items-center justify-center font-bold text-xs'>
+                          {review.reviewerId?.name?.charAt(0).toUpperCase() || 'U'}
+                        </div>
+                        <span className='font-medium text-sm'>{review.reviewerId?.name || 'Anonymous'}</span>
+                      </div>
+                      <span className='text-sm'>{'⭐'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</span>
+                    </div>
+                    {review.comment && <p className='text-sm text-gray-600'>{review.comment}</p>}
+                    <span className='text-xs text-gray-400'>{new Date(review.createdAt).toLocaleDateString()}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className='text-gray-500 text-sm'>No reviews yet for this listing.</p>
+            )}
           </div>
         </div>
       </div>

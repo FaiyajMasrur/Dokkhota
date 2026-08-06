@@ -1,5 +1,7 @@
-// Skill listing controller for Dokkhota skill creation, retrieval, and search
+// Skill listing controller for Dokkhota skill creation, retrieval, and search.
 const SkillListing = require('../models/SkillListing');
+
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const createListing = async (req, res, next) => {
   try {
@@ -102,21 +104,79 @@ const getListingById = async (req, res, next) => {
 
 const searchListings = async (req, res, next) => {
   try {
-    const { q, category, proficiencyLevel, format, minCredits, maxCredits, limit } = req.query;
-    const filters = { isActive: true };
-    if (category) filters.category = category;
-    if (proficiencyLevel) filters.proficiencyLevel = proficiencyLevel;
-    if (format) filters.format = format;
-    if (minCredits) filters.creditCost = { ...filters.creditCost, $gte: Number(minCredits) };
-    if (maxCredits) filters.creditCost = { ...filters.creditCost, $lte: Number(maxCredits) };
+    const {
+      q,
+      category,
+      level,
+      proficiencyLevel,
+      format,
+      minCredits,
+      maxCredits,
+      dayAvailable,
+      page = '1',
+      limit = '12',
+      sortBy = 'recent',
+    } = req.query;
 
-    let query = SkillListing.find(filters);
-    if (q) {
-      query = query.find({ $text: { $search: q } });
+    const cleanedQuery = q?.trim();
+    const cleanedCategory = category?.trim();
+    const cleanedLevel = level?.trim() || proficiencyLevel?.trim();
+    const cleanedFormat = format?.trim();
+    const cleanedDay = dayAvailable?.trim();
+
+    const filters = { isActive: true };
+    if (cleanedCategory) {
+      filters.category = new RegExp(`^${escapeRegExp(cleanedCategory)}$`, 'i');
     }
-    const maxResults = Math.min(Number(limit) || 50, 50);
-    const listings = await query.sort({ createdAt: -1 }).limit(maxResults);
-    return res.status(200).json({ success: true, listings });
+    if (cleanedLevel) {
+      filters.proficiencyLevel = cleanedLevel;
+    }
+    if (cleanedFormat) {
+      filters.format = cleanedFormat;
+    }
+    if (minCredits !== undefined && minCredits !== '') {
+      filters.creditCost = { ...(filters.creditCost || {}), $gte: Number(minCredits) };
+    }
+    if (maxCredits !== undefined && maxCredits !== '') {
+      filters.creditCost = { ...(filters.creditCost || {}), $lte: Number(maxCredits) };
+    }
+    if (cleanedDay) {
+      filters.availability = { $elemMatch: { day: new RegExp(`^${escapeRegExp(cleanedDay)}$`, 'i') } };
+    }
+
+    const currentPage = Math.max(Number(page) || 1, 1);
+    const pageSize = Math.min(Math.max(Number(limit) || 12, 1), 50);
+
+    const searchFilter = cleanedQuery
+      ? { ...filters, $text: { $search: cleanedQuery } }
+      : filters;
+
+    const sortOptions = {
+      recent: { createdAt: -1 },
+      credits_asc: { creditCost: 1, createdAt: -1 },
+      credits_desc: { creditCost: -1, createdAt: -1 },
+      rating_desc: { averageRating: -1, totalSessions: -1, createdAt: -1 },
+      title_asc: { title: 1 },
+    };
+
+    const selectedSort = sortOptions[sortBy] || sortOptions.recent;
+
+    const listings = await SkillListing.find(searchFilter)
+      .populate('teacherId', 'name avatarUrl city')
+      .sort(selectedSort)
+      .skip((currentPage - 1) * pageSize)
+      .limit(pageSize);
+
+    const totalResults = await SkillListing.countDocuments(searchFilter);
+
+    return res.status(200).json({
+      success: true,
+      listings,
+      page: currentPage,
+      limit: pageSize,
+      totalResults,
+      totalPages: Math.max(Math.ceil(totalResults / pageSize), 1),
+    });
   } catch (error) {
     return next(error);
   }

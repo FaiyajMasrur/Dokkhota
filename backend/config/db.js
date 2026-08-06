@@ -7,10 +7,16 @@ const DEFAULT_LOCAL_URI = process.env.MONGO_LOCAL_URI || 'mongodb://127.0.0.1:27
 
 const connectDB = async () => {
   const uri = process.env.MONGO_URI?.trim();
-  const hasRealMongoUri = Boolean(uri && !uri.includes('<') && !uri.includes('>') && !uri.includes('your_'));
+  const hasRealMongoUri = Boolean(uri && !uri.includes('<') && !uri.includes('>') && !uri.includes('your_') && !uri.includes('db_username') && !uri.includes('username') && !uri.includes('password'));
+
+  if (!uri) {
+    console.warn('MONGO_URI not set — falling back to local MongoDB at', DEFAULT_LOCAL_URI);
+    await tryConnectWithRetry(DEFAULT_LOCAL_URI);
+    return;
+  }
 
   if (!hasRealMongoUri) {
-    console.warn('MONGO_URI not set or still using placeholder values — falling back to local MongoDB at', DEFAULT_LOCAL_URI);
+    console.warn('MONGO_URI contains placeholder values; falling back to local MongoDB at', DEFAULT_LOCAL_URI);
     await tryConnectWithRetry(DEFAULT_LOCAL_URI);
     return;
   }

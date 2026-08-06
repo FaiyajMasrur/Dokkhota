@@ -19,6 +19,9 @@ const categoryRoutes = require('./routes/categoryRoutes');
 const creditRoutes = require('./routes/creditRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 const requestRoutes = require('./routes/requestRoutes');
+const messageRoutes = require('./routes/messageRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
+const badgeRoutes = require('./routes/badgeRoutes');
 const socketHandler = require('./sockets/socketHandler');
 
 const app = express();
@@ -60,6 +63,9 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/credits', creditRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/requests', requestRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/badges', badgeRoutes);
 
 app.use(errorHandler);
 

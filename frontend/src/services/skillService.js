@@ -1,8 +1,8 @@
-// Axios service for Dokkhota skill listing requests
+// Axios service for Dokkhota skill listing requests.
 import { api } from './authService.js';
 
 const skillService = {
-  async searchListings(params) {
+  async searchListings(params = {}) {
     return api.get('/skills/search', { params });
   },
   async getListing(listingId) {

@@ -1,7 +1,11 @@
-// Main React application router for Dokkhota
+
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+
 import { Suspense, lazy } from 'react';
+
+
 import Navbar from './components/Navbar.jsx';
+
 import HomePage from './pages/HomePage.jsx';
 import ExplorePage from './pages/ExplorePage.jsx';
 import ProfilePage from './pages/ProfilePage.jsx';
@@ -9,29 +13,38 @@ import ProfileEditPage from './pages/ProfileEditPage.jsx';
 import ListingDetailPage from './pages/ListingDetailPage.jsx';
 import BookSessionPage from './pages/BookSessionPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
+import CreditHistoryPage from './pages/CreditHistoryPage.jsx';
+
 import MessagesPage from './pages/MessagesPage.jsx';
-import MessageThreadPage from './pages/MessageThreadPage.jsx';
+import MessageThreadPage from './pages/MessageThreadPage.jsx'
+
+//import VideoSessionPage from './pages/VideoSessionPage.jsx';
+
 import LeaderboardPage from './pages/LeaderboardPage.jsx';
 import RequestBoardPage from './pages/RequestBoardPage.jsx';
+
 import AdminPanelPage from './pages/AdminPanelPage.jsx';
 import AdminUsersPage from './pages/AdminUsersPage.jsx';
 import AdminCategoriesPage from './pages/AdminCategoriesPage.jsx';
 import AdminFlagsPage from './pages/AdminFlagsPage.jsx';
 import AdminBadgesPage from './pages/AdminBadgesPage.jsx';
+
 import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
 import VerifyEmailPage from './pages/VerifyEmailPage.jsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
+import NotificationsPage from "./pages/NotificationsPage";
+import SessionHistoryPage from "./pages/SessionHistoryPage";
 import CreateListingPage from './pages/CreateListingPage.jsx';
 
-// Lazy-load VideoSessionPage so simple-peer (which uses Node.js builtins) doesn't crash the main bundle
 const VideoSessionPage = lazy(() => import('./pages/VideoSessionPage.jsx'));
 
 function App() {
   return (
     <Router>
       <Navbar />
+
       <Suspense fallback={<div className='max-w-6xl mx-auto px-4 py-10 text-gray-500'>Loading...</div>}>
         <Routes>
           <Route path='/' element={<HomePage />} />
@@ -57,11 +70,17 @@ function App() {
           <Route path='/verify-email' element={<VerifyEmailPage />} />
           <Route path='/forgot-password' element={<ForgotPasswordPage />} />
           <Route path='/reset-password/:token' element={<ResetPasswordPage />} />
+          <Route path="/credit-history" element={<CreditHistoryPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/session-history" element={<SessionHistoryPage />} />
+          
           <Route path='*' element={<Navigate to='/' />} />
         </Routes>
       </Suspense>
     </Router>
   );
 }
+
+      
 
 export default App;

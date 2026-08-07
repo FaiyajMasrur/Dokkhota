@@ -1,0 +1,26 @@
+const express = require("express");
+
+const router = express.Router();
+
+const admin = require("../controllers/adminController");
+
+
+router.get("/dashboard",admin.getDashboard);
+
+
+
+                                          ////////////////
+router.get("/users",admin.getUsers);
+
+router.put("/users/:id/suspend",admin.suspendUser);
+
+router.put("/users/:id/unsuspend",admin.unsuspendUser);
+
+router.delete("/users/:id",admin.deleteUser);
+
+                                             ///////////////////
+router.get("/disputes",admin.getDisputes);
+
+router.put("/disputes/:id",admin.resolveDispute);
+
+module.exports=router;

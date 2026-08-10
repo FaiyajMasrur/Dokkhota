@@ -6,7 +6,7 @@ module.exports = (io, socket) => {
   // ── Join personal room by userId ──────────────────────────────────────
   socket.on('join', (userId) => {
     if (userId) {
-      socket.join(userId);
+      socket.join(userId.toString());
       console.log(`Socket ${socket.id} joined user room: ${userId}`);
     }
   });
@@ -17,6 +17,12 @@ module.exports = (io, socket) => {
 
   socket.on('send_message', async (data) => {
     try {
+      // If message object was already saved via REST, just relay to receiver to prevent duplicate DB records
+      if (data.message && data.receiverId) {
+        io.to(data.receiverId.toString()).emit('receive_message', data.message);
+        return;
+      }
+
       const { senderId, receiverId, content, bookingId } = data;
       if (!senderId || !receiverId || !content) return;
 
@@ -31,7 +37,7 @@ module.exports = (io, socket) => {
       await message.populate('senderId', 'name avatarUrl');
       await message.populate('receiverId', 'name avatarUrl');
 
-      io.to(receiverId).emit('receive_message', message);
+      io.to(receiverId.toString()).emit('receive_message', message);
       socket.emit('message_sent', message);
     } catch (err) {
       console.error('Socket send_message error:', err);
@@ -40,46 +46,53 @@ module.exports = (io, socket) => {
   });
 
   socket.on('typing', ({ senderId, receiverId }) => {
-    io.to(receiverId).emit('user_typing', { senderId });
+    if (receiverId) {
+      io.to(receiverId.toString()).emit('user_typing', { senderId });
+    }
   });
 
   socket.on('stop_typing', ({ senderId, receiverId }) => {
-    io.to(receiverId).emit('user_stop_typing', { senderId });
+    if (receiverId) {
+      io.to(receiverId.toString()).emit('user_stop_typing', { senderId });
+    }
   });
 
   // ═══════════════════════════════════════════════════════════════════════
   //  WEBRTC VIDEO CALL SIGNALING
   // ═══════════════════════════════════════════════════════════════════════
 
-  // Step 1: Caller sends an invitation to start a video session
   socket.on('call_user', ({ from, to, fromName, bookingId }) => {
     console.log(`[Video] ${from} is calling ${to} for booking ${bookingId}`);
-    io.to(to).emit('incoming_call', { from, fromName, bookingId });
+    if (to) {
+      io.to(to.toString()).emit('incoming_call', { from, fromName, bookingId });
+    }
   });
 
-  // Step 2: Callee accepts the call
   socket.on('accept_call', ({ from, to }) => {
     console.log(`[Video] ${to} accepted call from ${from}`);
-    io.to(from).emit('call_accepted', { from: to });
+    if (from) {
+      io.to(from.toString()).emit('call_accepted', { from: to });
+    }
   });
 
-  // Step 3: Callee rejects the call
   socket.on('reject_call', ({ from, to }) => {
     console.log(`[Video] ${to} rejected call from ${from}`);
-    io.to(from).emit('call_rejected', { from: to });
+    if (from) {
+      io.to(from.toString()).emit('call_rejected', { from: to });
+    }
   });
 
-  // Step 4: WebRTC signaling — relay the offer/answer SDP
   socket.on('webrtc_signal', ({ to, signal }) => {
-    io.to(to).emit('webrtc_signal', { from: socket.userId || socket.id, signal });
+    if (to) {
+      io.to(to.toString()).emit('webrtc_signal', { from: socket.userId || socket.id, signal });
+    }
   });
 
-  // Step 5: Either party ends the call
   socket.on('end_call', ({ to }) => {
-    io.to(to).emit('call_ended');
+    if (to) {
+      io.to(to.toString()).emit('call_ended');
+    }
   });
-
-  // ═══════════════════════════════════════════════════════════════════════
 
   socket.on('disconnect', () => {
     console.log(`Socket disconnected: ${socket.id}`);

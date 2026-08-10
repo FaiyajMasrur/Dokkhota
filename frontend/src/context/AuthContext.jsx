@@ -1,4 +1,4 @@
-// Auth context for Dokkhota that stores the logged-in user and JWT access token in memory
+// Auth context for Dokkhota that stores the logged-in user and JWT access token
 import { createContext, useContext, useEffect, useState } from 'react';
 import authService, { api } from '../services/authService.js';
 
@@ -20,9 +20,14 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const restoreSession = async () => {
       try {
+        const storedToken = localStorage.getItem('token') || localStorage.getItem('accessToken');
+        if (storedToken) {
+          api.defaults.headers.common.Authorization = `Bearer ${storedToken}`;
+        }
         const refreshResponse = await authService.refreshToken();
-        const token = refreshResponse.data?.accessToken;
+        const token = refreshResponse.data?.accessToken || storedToken;
         if (token) {
+          localStorage.setItem('token', token);
           api.defaults.headers.common.Authorization = `Bearer ${token}`;
           const meResponse = await authService.getMe();
           if (meResponse.data?.success) {
@@ -31,8 +36,26 @@ export const AuthProvider = ({ children }) => {
           }
         }
       } catch (error) {
-        setUser(null);
-        setAccessToken(null);
+        // If refresh fails but we have a stored token, try getMe() directly
+        const storedToken = localStorage.getItem('token') || localStorage.getItem('accessToken');
+        if (storedToken) {
+          try {
+            api.defaults.headers.common.Authorization = `Bearer ${storedToken}`;
+            const meResponse = await authService.getMe();
+            if (meResponse.data?.success) {
+              setUser(normalizeUser(meResponse.data.user));
+              setAccessToken(storedToken);
+            }
+          } catch (e) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('accessToken');
+            setUser(null);
+            setAccessToken(null);
+          }
+        } else {
+          setUser(null);
+          setAccessToken(null);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -42,6 +65,8 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = (userData, token) => {
+    localStorage.setItem('token', token);
+    localStorage.setItem('accessToken', token);
     api.defaults.headers.common.Authorization = `Bearer ${token}`;
     setUser(normalizeUser(userData));
     setAccessToken(token);
@@ -53,6 +78,8 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       // ignore logout failures
     }
+    localStorage.removeItem('token');
+    localStorage.removeItem('accessToken');
     delete api.defaults.headers.common.Authorization;
     setUser(null);
     setAccessToken(null);

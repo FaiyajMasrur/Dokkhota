@@ -6,6 +6,18 @@ const api = axios.create({
   withCredentials: true,
 });
 
+// Automatically attach Bearer token to every request if available in localStorage
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 const authService = {
   async register(data) {
     return api.post('/auth/register', data);

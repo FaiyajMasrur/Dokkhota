@@ -19,7 +19,6 @@ const MessageThreadPage = () => {
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
 
-  // Auto-scroll to bottom
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -28,42 +27,38 @@ const MessageThreadPage = () => {
     scrollToBottom();
   }, [messages, isTyping]);
 
-  // ── Setup Socket.IO connection & fetch messages ───────────────────────
   useEffect(() => {
     if (!isAuthenticated || !currentUserId) return;
 
-    // 1. Initialize Socket.IO connection
     const socket = io('http://localhost:5000', {
       transports: ['websocket', 'polling'],
     });
     socketRef.current = socket;
 
-    // Join personal socket room
     socket.emit('join', currentUserId);
 
-    // Listen for incoming messages
     socket.on('receive_message', (newMessage) => {
-      // Check if message belongs to current thread
-      if (
-        (newMessage.senderId?._id || newMessage.senderId) === partnerId ||
-        (newMessage.senderId?._id || newMessage.senderId) === currentUserId
-      ) {
-        setMessages((prev) => [...prev, newMessage]);
+      const msgSenderId = newMessage.senderId?._id || newMessage.senderId;
+      // Only append if message is from partner (not duplicate of my own sent message)
+      if (msgSenderId?.toString() === partnerId?.toString()) {
+        setMessages((prev) => {
+          const exists = prev.some((m) => m._id?.toString() === newMessage._id?.toString());
+          return exists ? prev : [...prev, newMessage];
+        });
       }
     });
 
-    // Listen for typing indicators
     socket.on('user_typing', ({ senderId }) => {
-      if (senderId === partnerId) setIsTyping(true);
+      if (senderId?.toString() === partnerId?.toString()) setIsTyping(true);
     });
 
     socket.on('user_stop_typing', ({ senderId }) => {
-      if (senderId === partnerId) setIsTyping(false);
+      if (senderId?.toString() === partnerId?.toString()) setIsTyping(false);
     });
 
-    // 2. Fetch past message history via REST API
     const fetchThread = async () => {
       try {
+        setLoading(true);
         const res = await messageService.getMessages(partnerId, accessToken);
         setPartner(res.data.partner);
         setMessages(res.data.messages || []);
@@ -81,7 +76,6 @@ const MessageThreadPage = () => {
     };
   }, [accessToken, currentUserId, isAuthenticated, partnerId]);
 
-  // ── Handle sending message ───────────────────────────────────────────
   const handleSend = async (e) => {
     e.preventDefault();
     if (!inputText.trim()) return;
@@ -89,23 +83,22 @@ const MessageThreadPage = () => {
     const content = inputText.trim();
     setInputText('');
 
-    // Emit typing stop
     socketRef.current?.emit('stop_typing', { senderId: currentUserId, receiverId: partnerId });
 
     try {
-      // Send via REST API for robust persistence & immediate UI state
       const res = await messageService.sendMessage(
         { receiverId: partnerId, content },
         accessToken
       );
       if (res.data.success) {
-        setMessages((prev) => [...prev, res.data.message]);
+        const savedMsg = res.data.message;
+        setMessages((prev) => [...prev, savedMsg]);
 
-        // Also emit via socket for instant recipient notification
+        // Relay via socket to partner without duplicate DB saving
         socketRef.current?.emit('send_message', {
           senderId: currentUserId,
           receiverId: partnerId,
-          content,
+          message: savedMsg,
         });
       }
     } catch (err) {
@@ -113,7 +106,6 @@ const MessageThreadPage = () => {
     }
   };
 
-  // ── Handle typing status ─────────────────────────────────────────────
   const handleInputChange = (e) => {
     setInputText(e.target.value);
     if (socketRef.current) {
@@ -124,14 +116,13 @@ const MessageThreadPage = () => {
   return (
     <div className='min-h-screen bg-slate-50 py-6 px-4'>
       <div className='max-w-4xl mx-auto bg-white rounded-3xl shadow-sm border overflow-hidden flex flex-col h-[85vh]'>
-
-        {/* ── Thread Header ────────────────────────────────────────────── */}
+        {/* Header */}
         <div className='p-4 border-b bg-white flex items-center justify-between'>
           <div className='flex items-center gap-3'>
             <Link to='/messages' className='p-2 rounded-xl hover:bg-slate-100 text-gray-600 transition'>
               ← Back
             </Link>
-            <div className='w-10 h-10 rounded-full bg-green-100 text-green-800 flex items-center justify-center font-bold text-base overflow-hidden border'>
+            <div className='w-10 h-10 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-base overflow-hidden border border-emerald-200'>
               {partner?.avatarUrl ? (
                 <img src={partner.avatarUrl} alt={partner.name} className='w-full h-full object-cover' />
               ) : (
@@ -144,30 +135,32 @@ const MessageThreadPage = () => {
             </div>
           </div>
 
-          <Link to='/dashboard' className='text-xs font-medium text-green-700 hover:underline'>
+          <Link to='/dashboard' className='text-xs font-medium text-emerald-700 hover:underline'>
             Dashboard
           </Link>
         </div>
 
-        {/* ── Message Bubble Container ─────────────────────────────────── */}
+        {/* Messages list */}
         <div className='flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50'>
           {loading ? (
             <p className='text-center text-gray-500 py-10'>Loading conversation...</p>
           ) : messages.length > 0 ? (
             messages.map((msg, index) => {
               const msgSenderId = msg.senderId?._id || msg.senderId;
-              const isMine = msgSenderId === currentUserId;
+              const isMine = msgSenderId?.toString() === currentUserId?.toString();
               const time = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
               return (
                 <div key={msg._id || index} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[70%] rounded-2xl px-4 py-3 shadow-sm ${
-                    isMine
-                      ? 'bg-green-600 text-white rounded-br-none'
-                      : 'bg-white border text-gray-900 rounded-bl-none'
-                  }`}>
+                  <div
+                    className={`max-w-[70%] rounded-2xl px-4 py-3 shadow-sm ${
+                      isMine
+                        ? 'bg-emerald-600 text-white rounded-br-none'
+                        : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none'
+                    }`}
+                  >
                     <p className='text-sm whitespace-pre-wrap leading-relaxed'>{msg.content}</p>
-                    <p className={`text-[10px] mt-1 text-right ${isMine ? 'text-green-100' : 'text-gray-400'}`}>
+                    <p className={`text-[10px] mt-1 text-right ${isMine ? 'text-emerald-100' : 'text-slate-400'}`}>
                       {time}
                     </p>
                   </div>
@@ -177,14 +170,13 @@ const MessageThreadPage = () => {
           ) : (
             <div className='text-center py-16 text-gray-400'>
               <p className='text-lg font-medium'>No messages yet!</p>
-              <p className='text-sm mt-1'>Say hello to start the conversation.</p>
+              <p className='text-sm mt-1'>Say hello to start discussing your session.</p>
             </div>
           )}
 
-          {/* Typing Indicator */}
           {isTyping && (
             <div className='flex justify-start'>
-              <div className='bg-white border rounded-2xl rounded-bl-none px-4 py-2 text-xs text-gray-500 italic animate-pulse'>
+              <div className='bg-white border rounded-2xl rounded-bl-none px-4 py-2 text-xs text-slate-500 italic animate-pulse'>
                 {partner?.name || 'User'} is typing...
               </div>
             </div>
@@ -193,19 +185,19 @@ const MessageThreadPage = () => {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* ── Input Footer ─────────────────────────────────────────────── */}
+        {/* Input */}
         <form onSubmit={handleSend} className='p-4 bg-white border-t flex items-center gap-3'>
           <input
             type='text'
             value={inputText}
             onChange={handleInputChange}
             placeholder='Type your message...'
-            className='flex-1 border rounded-2xl px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-600 bg-slate-50'
+            className='flex-1 border border-slate-200 rounded-2xl px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-slate-50'
           />
           <button
             type='submit'
             disabled={!inputText.trim()}
-            className='bg-green-600 text-white px-6 py-3 rounded-2xl font-medium text-sm hover:bg-green-700 disabled:opacity-50 transition shadow-sm'
+            className='bg-emerald-600 text-white px-6 py-3 rounded-2xl font-medium text-sm hover:bg-emerald-700 disabled:opacity-50 transition shadow-sm'
           >
             Send
           </button>

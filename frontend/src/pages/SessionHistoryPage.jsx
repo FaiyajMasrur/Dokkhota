@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import sessionHistoryService from "../services/sessionHistoryService.js";
+import bookingService from "../services/bookingService.js";
 
 const SessionHistoryPage = () => {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("all"); // 'all' | 'teaching' | 'learning'
 
@@ -27,6 +29,19 @@ const SessionHistoryPage = () => {
   useEffect(() => {
     loadSessionHistory();
   }, []);
+
+  const handleStatusUpdate = async (bookingId, newStatus) => {
+    try {
+      setActionLoading(true);
+      await bookingService.updateBookingStatus(bookingId, newStatus);
+      await loadSessionHistory();
+    } catch (err) {
+      console.error("Failed to update status:", err);
+      setError("Could not update session status.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const filteredSessions = sessions.filter((s) => {
     if (activeTab === "teaching") return s.role === "Teacher";
@@ -140,7 +155,13 @@ const SessionHistoryPage = () => {
                   filteredSessions.map((session) => (
                     <tr key={session._id} className="hover:bg-slate-50 transition">
                       <td className="p-4 font-semibold text-slate-800">
-                        <span className={`px-2.5 py-1 rounded-md text-xs ${session.role === 'Teacher' ? 'bg-indigo-100 text-indigo-800' : 'bg-teal-100 text-teal-800'}`}>
+                        <span
+                          className={`px-2.5 py-1 rounded-md text-xs ${
+                            session.role === "Teacher"
+                              ? "bg-indigo-100 text-indigo-800"
+                              : "bg-teal-100 text-teal-800"
+                          }`}
+                        >
                           {session.role}
                         </span>
                       </td>
@@ -163,20 +184,54 @@ const SessionHistoryPage = () => {
                       </td>
                       <td className="p-4 text-xs text-slate-600">
                         <div>{session.sessionDate || "N/A"}</div>
-                        {session.sessionTime && <div className="text-slate-400">{session.sessionTime}</div>}
+                        {session.sessionTime && (
+                          <div className="text-slate-400">{session.sessionTime}</div>
+                        )}
                       </td>
-                      <td className="p-4 font-bold text-slate-800">{session.creditCost || 0} SC</td>
+                      <td className="p-4 font-bold text-slate-800">{session.creditCost || 10} SC</td>
                       <td className="p-4">{getStatusBadge(session.status)}</td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">
-                          {(session.status === "accepted" || session.status === "Completed") && (
-                            <Link
-                              to={`/session/${session.bookingId}`}
-                              className="text-xs bg-emerald-600 text-white font-medium px-2.5 py-1.5 rounded-lg hover:bg-emerald-700 transition"
-                            >
-                              Join Call
-                            </Link>
+                          {/* Pending Session Actions for Teacher */}
+                          {session.status?.toLowerCase() === "pending" && session.role === "Teacher" && (
+                            <>
+                              <button
+                                disabled={actionLoading}
+                                onClick={() => handleStatusUpdate(session.bookingId, "accepted")}
+                                className="text-xs bg-blue-600 text-white font-medium px-2.5 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition shadow-sm"
+                              >
+                                ✓ Accept
+                              </button>
+                              <button
+                                disabled={actionLoading}
+                                onClick={() => handleStatusUpdate(session.bookingId, "rejected")}
+                                className="text-xs bg-rose-600 text-white font-medium px-2.5 py-1.5 rounded-lg hover:bg-rose-700 disabled:opacity-50 transition shadow-sm"
+                              >
+                                ✗ Reject
+                              </button>
+                            </>
                           )}
+
+                          {/* Accepted / Confirmed Session Actions */}
+                          {session.status?.toLowerCase() === "accepted" && (
+                            <>
+                              <Link
+                                to={`/session/${session.bookingId}`}
+                                className="text-xs bg-emerald-600 text-white font-medium px-2.5 py-1.5 rounded-lg hover:bg-emerald-700 transition shadow-sm"
+                              >
+                                Join Call
+                              </Link>
+                              <button
+                                disabled={actionLoading}
+                                onClick={() => handleStatusUpdate(session.bookingId, "completed")}
+                                className="text-xs bg-indigo-600 text-white font-medium px-2.5 py-1.5 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition shadow-sm"
+                              >
+                                ✓ Complete
+                              </button>
+                            </>
+                          )}
+
+                          {/* Chat button for all active partners */}
                           {session.partner?._id && (
                             <Link
                               to={`/messages/${session.partner._id}`}

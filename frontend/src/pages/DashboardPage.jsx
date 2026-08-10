@@ -16,27 +16,6 @@ const STATUS_STYLES = {
   completed: 'bg-green-100 text-green-800',
 };
 
-// ── Confirmation modal ─────────────────────────────────────────────────
-const ConfirmModal = ({ show, title, message, onConfirm, onCancel, confirmLabel, confirmColor }) => {
-  if (!show) return null;
-  return (
-    <div className='fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50'>
-      <div className='bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4'>
-        <h3 className='text-lg font-semibold mb-2'>{title}</h3>
-        <p className='text-gray-600 mb-6'>{message}</p>
-        <div className='flex gap-3 justify-end'>
-          <button onClick={onCancel} className='px-4 py-2 rounded-xl border border-gray-300 text-gray-600 hover:bg-gray-50 transition'>
-            Go back
-          </button>
-          <button onClick={onConfirm} className={`px-4 py-2 rounded-xl text-white transition ${confirmColor || 'bg-green-600 hover:bg-green-700'}`}>
-            {confirmLabel || 'Confirm'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 // ── Review button with inline star rating ──────────────────────────────
 const ReviewButton = ({ bookingId }) => {
   const { accessToken } = useAuth();
@@ -139,29 +118,8 @@ const BookingCard = ({ booking, userId, onStatusChange, actionLoading }) => {
   const listingTitle = booking.listingId?.title || 'Untitled session';
   const category = booking.listingId?.category || '';
 
-  const [confirm, setConfirm] = useState(null); // { status, title, message, confirmLabel, confirmColor }
-
-  const requestAction = (status, title, message, confirmLabel, confirmColor) => {
-    setConfirm({ status, title, message, confirmLabel, confirmColor });
-  };
-
-  const handleConfirm = () => {
-    onStatusChange(booking._id, confirm.status);
-    setConfirm(null);
-  };
-
   return (
     <div className='border border-gray-200 rounded-2xl p-5 hover:shadow-md transition-shadow'>
-      <ConfirmModal
-        show={!!confirm}
-        title={confirm?.title}
-        message={confirm?.message}
-        confirmLabel={confirm?.confirmLabel}
-        confirmColor={confirm?.confirmColor}
-        onConfirm={handleConfirm}
-        onCancel={() => setConfirm(null)}
-      />
-
       {/* Header row */}
       <div className='flex items-start justify-between mb-3'>
         <div>
@@ -188,15 +146,15 @@ const BookingCard = ({ booking, userId, onStatusChange, actionLoading }) => {
           <>
             <button
               disabled={actionLoading}
-              onClick={() => requestAction('accepted', 'Accept this session?', `You are confirming the session "${listingTitle}" with ${otherPerson?.name}. The student's credits will remain on hold until the session is completed.`, 'Accept', 'bg-blue-600 hover:bg-blue-700')}
-              className='px-4 py-2 text-sm font-medium rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition'
+              onClick={() => onStatusChange(booking._id, 'accepted')}
+              className='px-4 py-2 text-sm font-medium rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition shadow-sm'
             >
               ✓ Accept
             </button>
             <button
               disabled={actionLoading}
-              onClick={() => requestAction('rejected', 'Reject this session?', `You are rejecting the session "${listingTitle}". The student's held credits (${booking.creditCost} SC) will be refunded to them automatically.`, 'Reject', 'bg-red-600 hover:bg-red-700')}
-              className='px-4 py-2 text-sm font-medium rounded-xl bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition'
+              onClick={() => onStatusChange(booking._id, 'rejected')}
+              className='px-4 py-2 text-sm font-medium rounded-xl bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition shadow-sm'
             >
               ✗ Reject
             </button>
@@ -206,8 +164,8 @@ const BookingCard = ({ booking, userId, onStatusChange, actionLoading }) => {
         {booking.status === 'pending' && isStudent && (
           <button
             disabled={actionLoading}
-            onClick={() => requestAction('cancelled', 'Cancel this booking?', `You are cancelling your booking for "${listingTitle}". Your held credits (${booking.creditCost} SC) will be refunded to your available balance.`, 'Cancel booking', 'bg-red-600 hover:bg-red-700')}
-            className='px-4 py-2 text-sm font-medium rounded-xl bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition'
+            onClick={() => onStatusChange(booking._id, 'cancelled')}
+            className='px-4 py-2 text-sm font-medium rounded-xl bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition shadow-sm'
           >
             Cancel booking
           </button>
@@ -217,15 +175,15 @@ const BookingCard = ({ booking, userId, onStatusChange, actionLoading }) => {
           <>
             <button
               disabled={actionLoading}
-              onClick={() => requestAction('completed', 'Mark session as completed?', `This will finalize the session. ${booking.creditCost} SC will be transferred from the student to the teacher. This action cannot be undone.`, 'Mark completed', 'bg-green-600 hover:bg-green-700')}
-              className='px-4 py-2 text-sm font-medium rounded-xl bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 transition'
+              onClick={() => onStatusChange(booking._id, 'completed')}
+              className='px-4 py-2 text-sm font-medium rounded-xl bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 transition shadow-sm'
             >
               ✓ Mark completed
             </button>
             <button
               disabled={actionLoading}
-              onClick={() => requestAction('cancelled', 'Cancel this session?', `You are cancelling the accepted session "${listingTitle}". The student's held credits (${booking.creditCost} SC) will be refunded.`, 'Cancel session', 'bg-red-600 hover:bg-red-700')}
-              className='px-4 py-2 text-sm font-medium rounded-xl bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition'
+              onClick={() => onStatusChange(booking._id, 'cancelled')}
+              className='px-4 py-2 text-sm font-medium rounded-xl bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition shadow-sm'
             >
               Cancel session
             </button>
@@ -306,15 +264,13 @@ const DashboardPage = () => {
     setStatusMsg(null);
     try {
       await bookingService.updateBookingStatus(bookingId, newStatus, accessToken);
-      setStatusMsg({ type: 'success', text: `Session ${newStatus} successfully!` });
-      // Refresh everything (bookings + credits) so the UI is always in sync
+      setStatusMsg({ type: 'success', text: `Session marked as ${newStatus} successfully!` });
       await loadData();
     } catch (err) {
       const msg = err.response?.data?.message || 'Something went wrong. Please try again.';
       setStatusMsg({ type: 'error', text: msg });
     } finally {
       setActionLoading(false);
-      // Clear status message after 4 seconds
       setTimeout(() => setStatusMsg(null), 4000);
     }
   };

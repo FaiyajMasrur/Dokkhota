@@ -29,6 +29,7 @@ const badgeRoutes = require("./routes/badgeRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const sessionHistoryRoutes = require("./routes/sessionHistoryRoutes");
 const leaderboardRoutes = require("./routes/leaderboardRoutes");
+const disputeRoutes = require("./routes/disputeRoutes");
 
 const socketHandler = require("./sockets/socketHandler");
 
@@ -54,6 +55,8 @@ const io = new Server(server, {
     credentials: true,
   },
 });
+
+app.set("io", io);
 
 app.use(
   cors({
@@ -81,6 +84,7 @@ app.use("/api/badges", badgeRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/session-history", sessionHistoryRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
+app.use("/api/disputes", disputeRoutes);
 
 app.use("/api/admin", adminRoutes);
 

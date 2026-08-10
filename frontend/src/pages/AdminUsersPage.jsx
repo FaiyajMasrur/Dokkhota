@@ -1,16 +1,24 @@
 // Admin users management page for Dokkhota
 import { useEffect, useState } from "react";
+import adminService from "../services/adminService.js";
 
 const AdminUsersPage = () => {
   const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
 
   const loadUsers = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/admin/users");
-      const data = await res.json();
+      setLoading(true);
+      setError("");
+      const data = await adminService.getUsers();
       setUsers(data.users || []);
     } catch (err) {
-      console.log(err);
+      console.error("Admin load users error:", err);
+      setError("Failed to load user accounts.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -19,144 +27,168 @@ const AdminUsersPage = () => {
   }, []);
 
   const suspendUser = async (id) => {
-    await fetch(`http://localhost:5000/api/admin/users/${id}/suspend`, {
-      method: "PUT",
-    });
-
-    loadUsers();
+    try {
+      await adminService.suspendUser(id);
+      loadUsers();
+    } catch (err) {
+      console.error("Suspend error:", err);
+    }
   };
 
   const activateUser = async (id) => {
-    await fetch(`http://localhost:5000/api/admin/users/${id}/unsuspend`, {
-      method: "PUT",
-    });
-
-    loadUsers();
+    try {
+      await adminService.unsuspendUser(id);
+      loadUsers();
+    } catch (err) {
+      console.error("Activate error:", err);
+    }
   };
 
   const deleteUser = async (id) => {
     const confirmDelete = window.confirm(
-      "Are you sure you want to delete this user?"
+      "Are you sure you want to permanently delete this user account?"
     );
-
     if (!confirmDelete) return;
 
-    await fetch(`http://localhost:5000/api/admin/users/${id}`, {
-      method: "DELETE",
-    });
-
-    loadUsers();
+    try {
+      await adminService.deleteUser(id);
+      loadUsers();
+    } catch (err) {
+      console.error("Delete error:", err);
+    }
   };
 
+  const filteredUsers = users.filter(
+    (u) =>
+      u.name?.toLowerCase().includes(search.toLowerCase()) ||
+      u.email?.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="max-w-6xl mx-auto px-4 py-10">
-        <div className="bg-white rounded-3xl p-8 shadow-sm">
+    <div className="min-h-screen bg-slate-50 py-10">
+      <div className="max-w-6xl mx-auto px-4">
+        <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-800">User Management</h1>
+              <p className="text-slate-500 text-sm mt-1">
+                View, suspend, activate or delete user accounts across Dokkhota.
+              </p>
+            </div>
 
-          <h1 className="text-3xl font-semibold mb-4">
-            User Management
-          </h1>
-
-          <p className="text-gray-600 mb-6">
-            View, suspend, activate or delete users.
-          </p>
-
-          <div className="overflow-x-auto">
-
-            <table className="w-full border border-gray-300">
-
-              <thead className="bg-gray-100">
-
-                <tr>
-
-                  <th className="border p-3">Name</th>
-
-                  <th className="border p-3">Email</th>
-
-                  <th className="border p-3">Role</th>
-
-                  <th className="border p-3">Status</th>
-
-                  <th className="border p-3">Actions</th>
-
-                </tr>
-
-              </thead>
-
-              <tbody>
-
-                {users.length === 0 ? (
-
-                  <tr>
-
-                    <td
-                      colSpan="5"
-                      className="text-center p-5"
-                    >
-                      No Users Found
-                    </td>
-
-                  </tr>
-
-                ) : (
-
-                  users.map((user) => (
-
-                    <tr key={user._id}>
-
-                      <td className="border p-3">
-                        {user.name}
-                      </td>
-
-                      <td className="border p-3">
-                        {user.email}
-                      </td>
-
-                      <td className="border p-3">
-                        {user.role}
-                      </td>
-
-                      <td className="border p-3">
-                        {user.isSuspended ? "Suspended" : "Active"}
-                      </td>
-
-                      <td className="border p-3 space-x-2">
-
-                        <button
-                          onClick={() => suspendUser(user._id)}
-                          className="bg-yellow-500 text-white px-3 py-1 rounded"
-                        >
-                          Suspend
-                        </button>
-
-                        <button
-                          onClick={() => activateUser(user._id)}
-                          className="bg-green-600 text-white px-3 py-1 rounded"
-                        >
-                          Activate
-                        </button>
-
-                        <button
-                          onClick={() => deleteUser(user._id)}
-                          className="bg-red-600 text-white px-3 py-1 rounded"
-                        >
-                          Delete
-                        </button>
-
-                      </td>
-
-                    </tr>
-
-                  ))
-
-                )}
-
-              </tbody>
-
-            </table>
-
+            <input
+              type="text"
+              placeholder="Search user by name or email..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="px-4 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 w-full md:w-72"
+            />
           </div>
 
+          {error && (
+            <div className="mb-6 p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-sm">
+              {error}
+            </div>
+          )}
+
+          <div className="overflow-x-auto rounded-xl border border-slate-200">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-slate-100 text-slate-700 text-xs font-semibold uppercase tracking-wider">
+                <tr>
+                  <th className="p-4 border-b">User</th>
+                  <th className="p-4 border-b">Email</th>
+                  <th className="p-4 border-b">Role</th>
+                  <th className="p-4 border-b">Credits</th>
+                  <th className="p-4 border-b">Status</th>
+                  <th className="p-4 border-b">Actions</th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
+                {loading ? (
+                  <tr>
+                    <td colSpan="6" className="text-center py-10 text-slate-400">
+                      Loading users...
+                    </td>
+                  </tr>
+                ) : filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="text-center py-10 text-slate-400">
+                      No users found.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsers.map((user) => (
+                    <tr key={user._id} className="hover:bg-slate-50 transition">
+                      <td className="p-4 font-semibold text-slate-800">
+                        <div className="flex items-center gap-2">
+                          <span className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs">
+                            {user.name?.[0]}
+                          </span>
+                          {user.name}
+                        </div>
+                      </td>
+
+                      <td className="p-4 text-slate-600">{user.email}</td>
+
+                      <td className="p-4">
+                        <span
+                          className={`text-xs font-semibold px-2.5 py-1 rounded-md ${
+                            user.role === "admin"
+                              ? "bg-amber-100 text-amber-800"
+                              : "bg-slate-100 text-slate-700"
+                          }`}
+                        >
+                          {user.role}
+                        </span>
+                      </td>
+
+                      <td className="p-4 font-bold text-emerald-600">{user.creditBalance ?? 0} SC</td>
+
+                      <td className="p-4">
+                        {user.isSuspended ? (
+                          <span className="bg-rose-100 text-rose-800 text-xs font-semibold px-2.5 py-1 rounded-full">
+                            Suspended
+                          </span>
+                        ) : (
+                          <span className="bg-emerald-100 text-emerald-800 text-xs font-semibold px-2.5 py-1 rounded-full">
+                            Active
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          {!user.isSuspended ? (
+                            <button
+                              onClick={() => suspendUser(user._id)}
+                              className="text-xs bg-amber-500 hover:bg-amber-600 text-white font-medium px-3 py-1.5 rounded-lg transition"
+                            >
+                              Suspend
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => activateUser(user._id)}
+                              className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3 py-1.5 rounded-lg transition"
+                            >
+                              Activate
+                            </button>
+                          )}
+
+                          <button
+                            onClick={() => deleteUser(user._id)}
+                            className="text-xs bg-rose-600 hover:bg-rose-700 text-white font-medium px-3 py-1.5 rounded-lg transition"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

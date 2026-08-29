@@ -56,6 +56,14 @@ const MessageThreadPage = () => {
       if (senderId?.toString() === partnerId?.toString()) setIsTyping(false);
     });
 
+    socket.on('message_reaction', ({ messageId, reactions }) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m._id?.toString() === messageId?.toString() ? { ...m, reactions } : m
+        )
+      );
+    });
+
     const fetchThread = async () => {
       try {
         setLoading(true);
@@ -113,6 +121,27 @@ const MessageThreadPage = () => {
     }
   };
 
+  const handleReact = async (messageId, emoji) => {
+    try {
+      const res = await messageService.addReaction(messageId, emoji, accessToken);
+      if (res.data?.success) {
+        const updatedMsg = res.data.message;
+        setMessages((prev) =>
+          prev.map((m) => (m._id?.toString() === messageId?.toString() ? updatedMsg : m))
+        );
+        socketRef.current?.emit('message_reaction', {
+          receiverId: partnerId,
+          messageId,
+          reactions: updatedMsg.reactions,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to react to message:', err);
+    }
+  };
+
+  const EMOJI_OPTIONS = ['👍', '❤️', '💡', '🎉', '😂', '🔥'];
+
   return (
     <div className='min-h-screen bg-slate-50 py-6 px-4'>
       <div className='max-w-4xl mx-auto bg-white rounded-3xl shadow-sm border overflow-hidden flex flex-col h-[85vh]'>
@@ -149,21 +178,70 @@ const MessageThreadPage = () => {
               const msgSenderId = msg.senderId?._id || msg.senderId;
               const isMine = msgSenderId?.toString() === currentUserId?.toString();
               const time = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              const reactions = msg.reactions || [];
+
+              // Group reactions by emoji
+              const groupedReactions = {};
+              reactions.forEach((r) => {
+                const e = r.emoji;
+                if (!groupedReactions[e]) groupedReactions[e] = { count: 0, hasMine: false };
+                groupedReactions[e].count += 1;
+                if (r.userId?.toString() === currentUserId?.toString()) {
+                  groupedReactions[e].hasMine = true;
+                }
+              });
 
               return (
-                <div key={msg._id || index} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-                  <div
-                    className={`max-w-[70%] rounded-2xl px-4 py-3 shadow-sm ${
-                      isMine
-                        ? 'bg-emerald-600 text-white rounded-br-none'
-                        : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none'
-                    }`}
-                  >
-                    <p className='text-sm whitespace-pre-wrap leading-relaxed'>{msg.content}</p>
-                    <p className={`text-[10px] mt-1 text-right ${isMine ? 'text-emerald-100' : 'text-slate-400'}`}>
-                      {time}
-                    </p>
+                <div key={msg._id || index} className={`flex flex-col ${isMine ? 'items-end' : 'items-start'} group`}>
+                  <div className='flex items-center gap-1.5'>
+                    {/* Quick emoji reaction toolbar */}
+                    <div className='opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5 bg-white border border-gray-200 rounded-full px-1.5 py-0.5 shadow-sm scale-90'>
+                      {EMOJI_OPTIONS.map((emoji) => (
+                        <button
+                          key={emoji}
+                          type='button'
+                          onClick={() => handleReact(msg._id, emoji)}
+                          className='hover:scale-125 transition text-xs p-0.5'
+                          title={`React with ${emoji}`}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div
+                      className={`max-w-[70%] rounded-2xl px-4 py-3 shadow-sm ${
+                        isMine
+                          ? 'bg-emerald-600 text-white rounded-br-none'
+                          : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none'
+                      }`}
+                    >
+                      <p className='text-sm whitespace-pre-wrap leading-relaxed'>{msg.content}</p>
+                      <p className={`text-[10px] mt-1 text-right ${isMine ? 'text-emerald-100' : 'text-slate-400'}`}>
+                        {time}
+                      </p>
+                    </div>
                   </div>
+
+                  {/* Render reaction badges */}
+                  {Object.keys(groupedReactions).length > 0 && (
+                    <div className='flex flex-wrap gap-1 mt-1 px-1'>
+                      {Object.entries(groupedReactions).map(([emoji, data]) => (
+                        <button
+                          key={emoji}
+                          onClick={() => handleReact(msg._id, emoji)}
+                          className={`text-xs px-2 py-0.5 rounded-full border flex items-center gap-1 transition ${
+                            data.hasMine
+                              ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                              : 'bg-white border-gray-200 text-gray-700'
+                          }`}
+                        >
+                          <span>{emoji}</span>
+                          <span className='font-semibold text-[10px]'>{data.count}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })

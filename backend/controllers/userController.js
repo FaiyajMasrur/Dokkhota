@@ -38,7 +38,7 @@ const updateProfile = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    const { name, avatarUrl, bio, city, languages } = req.body;
+    const { name, avatarUrl, bio, city, languages, skillsWanted } = req.body;
     if (name) user.name = name.trim();
     if (avatarUrl !== undefined) user.avatarUrl = avatarUrl.trim();
     if (bio !== undefined) user.bio = bio.trim();
@@ -47,6 +47,11 @@ const updateProfile = async (req, res, next) => {
       user.languages = Array.isArray(languages)
         ? languages.map((l) => l.trim()).filter(Boolean)
         : languages.split(',').map((l) => l.trim()).filter(Boolean);
+    }
+    if (skillsWanted !== undefined) {
+      user.skillsWanted = Array.isArray(skillsWanted)
+        ? skillsWanted.map((s) => s.trim()).filter(Boolean)
+        : skillsWanted.split(',').map((s) => s.trim()).filter(Boolean);
     }
 
     await user.save();
@@ -104,7 +109,7 @@ const uploadAvatar = async (req, res, next) => {
 
     user.avatarUrl = url;
     await user.save();
-    return res.status(200).json({ success: true, avatarUrl: url });
+    return res.status(200).json({ success: true, avatarUrl: url, user });
   } catch (error) {
     return next(error);
   }

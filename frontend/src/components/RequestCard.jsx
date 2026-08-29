@@ -17,7 +17,16 @@ const RequestCard = ({ request, currentUserId, onRespond, onApprove, onReject, i
           <span key={tag} className='text-xs bg-gray-100 rounded-full px-3 py-1 text-gray-700'>#{tag}</span>
         ))}
       </div>
-      <div className='text-sm text-gray-500 mb-4'>Budget: {request.preferredBudget || 0} SC • Format: {request.preferredFormat}</div>
+      <div className='text-xs text-gray-600 bg-slate-50 p-3 rounded-2xl mb-4 space-y-1'>
+        <div className='flex flex-wrap gap-x-4 gap-y-1'>
+          <span><strong>Level:</strong> <span className='capitalize'>{request.currentLevel || 'Beginner'}</span></span>
+          <span><strong>Format:</strong> <span className='capitalize'>{request.preferredFormat}</span></span>
+          <span><strong>Budget:</strong> {request.preferredBudget || 0} SC</span>
+        </div>
+        {request.availableTimeSlots && (
+          <div><strong>Preferred Time Slots:</strong> {request.availableTimeSlots}</div>
+        )}
+      </div>
 
       {isOwner ? (
         <div className='space-y-3'>

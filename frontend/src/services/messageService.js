@@ -17,6 +17,11 @@ const messageService = {
       headers: { Authorization: `Bearer ${token}` },
     });
   },
+  async addReaction(messageId, emoji, token) {
+    return api.post(`/messages/${messageId}/react`, { emoji }, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  },
 };
 
 export default messageService;

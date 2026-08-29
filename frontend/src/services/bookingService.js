@@ -12,8 +12,9 @@ const bookingService = {
       headers: { Authorization: `Bearer ${token}` },
     });
   },
-  async updateBookingStatus(bookingId, status, token) {
-    return api.patch(`/bookings/${bookingId}`, { status }, {
+  async updateBookingStatus(bookingId, statusData, token) {
+    const body = typeof statusData === 'object' ? statusData : { status: statusData };
+    return api.patch(`/bookings/${bookingId}`, body, {
       headers: { Authorization: `Bearer ${token}` },
     });
   },

@@ -13,6 +13,7 @@ const ProfileEditPage = () => {
     bio: '',
     languages: '',
     skillsOffered: '',
+    skillsWanted: '',
   });
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState('');
@@ -27,6 +28,7 @@ const ProfileEditPage = () => {
         bio: user.bio || '',
         languages: (user.languages || []).join(', '),
         skillsOffered: (user.skillsOffered || []).map((skill) => `${skill.title} (${skill.category})`).join(', '),
+        skillsWanted: (user.skillsWanted || []).join(', '),
       });
       setAvatarPreview(user.avatarUrl || '');
     }
@@ -47,19 +49,24 @@ const ProfileEditPage = () => {
     }
 
     try {
+      let avatarUrl = user?.avatarUrl;
       // upload avatar first if present
       if (avatarFile) {
         const uploadResp = await userService.uploadAvatar(avatarFile, accessToken);
-        if (uploadResp.data?.success) {
-          profilePayload.avatarUrl = uploadResp.data.avatarUrl;
+        if (uploadResp.data?.success && uploadResp.data.avatarUrl) {
+          avatarUrl = uploadResp.data.avatarUrl;
         }
       }
+
       const profilePayload = {
         name: form.name,
         city: form.city,
         bio: form.bio,
         languages: form.languages,
+        skillsWanted: form.skillsWanted.split(',').map((s) => s.trim()).filter(Boolean),
+        avatarUrl,
       };
+
       const skillsPayload = form.skillsOffered
         .split(',')
         .map((item) => item.trim())
@@ -72,14 +79,22 @@ const ProfileEditPage = () => {
           return { title: item, category: 'General', description: '' };
         });
 
-      await userService.updateProfile(profilePayload, accessToken);
-      await userService.updateSkillsOffered(skillsPayload, accessToken);
+      const updateRes = await userService.updateProfile(profilePayload, accessToken);
+      const skillsRes = await userService.updateSkillsOffered(skillsPayload, accessToken);
       setSuccess('Profile updated successfully');
-      const updatedUser = { ...user, ...profilePayload, languages: form.languages.split(',').map((l) => l.trim()).filter(Boolean), skillsOffered: skillsPayload };
+
+      const updatedUser = {
+        ...user,
+        ...(updateRes.data?.user || {}),
+        skillsOffered: skillsRes.data?.user?.skillsOffered || skillsPayload,
+        skillsWanted: form.skillsWanted.split(',').map((s) => s.trim()).filter(Boolean),
+        avatarUrl: avatarUrl || user?.avatarUrl,
+        languages: form.languages.split(',').map((l) => l.trim()).filter(Boolean),
+      };
       setUser(updatedUser);
       navigate(`/profile/${user.id || user._id}`);
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not update profile');
+      setError(err.response?.data?.message || err.message || 'Could not update profile');
     }
   };
 
@@ -88,39 +103,76 @@ const ProfileEditPage = () => {
   }
 
   return (
-    <div className='min-h-screen bg-slate-50'>
-      <div className='max-w-4xl mx-auto px-4 py-10'>
-        <div className='bg-white rounded-3xl shadow-sm p-8'>
-          <h1 className='text-3xl font-semibold mb-4'>Edit Profile</h1>
-          {error && <div className='text-red-600 mb-4'>{error}</div>}
-          {success && <div className='text-green-600 mb-4'>{success}</div>}
-          <form className='space-y-4' onSubmit={handleSubmit}>
+    <div className='min-h-screen bg-slate-50 py-10'>
+      <div className='max-w-4xl mx-auto px-4'>
+        <div className='bg-white rounded-3xl shadow-sm p-8 border border-slate-100'>
+          <h1 className='text-3xl font-bold text-slate-800 mb-2'>Edit Profile</h1>
+          <p className='text-sm text-slate-500 mb-6'>
+            Update your public profile, skills you can teach, and skills you want to learn for AI-powered smart matching.
+          </p>
+
+          {error && <div className='p-4 mb-6 rounded-xl bg-red-50 text-red-700 border border-red-200 text-sm'>{error}</div>}
+          {success && <div className='p-4 mb-6 rounded-xl bg-green-50 text-green-700 border border-green-200 text-sm'>{success}</div>}
+
+          <form className='space-y-5' onSubmit={handleSubmit}>
             <div>
-              <label className='block mb-1 font-medium'>Full Name</label>
-              <input value={form.name} onChange={handleChange('name')} className='w-full border rounded px-4 py-3' required />
+              <label className='block mb-1.5 text-xs font-semibold text-slate-700'>Full Name</label>
+              <input value={form.name} onChange={handleChange('name')} className='w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none' required />
             </div>
             <div>
-              <label className='block mb-1 font-medium'>City</label>
-              <input value={form.city} onChange={handleChange('city')} className='w-full border rounded px-4 py-3' />
+              <label className='block mb-1.5 text-xs font-semibold text-slate-700'>City</label>
+              <input value={form.city} onChange={handleChange('city')} className='w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none' placeholder='e.g. Dhaka' />
             </div>
             <div>
-              <label className='block mb-1 font-medium'>Bio</label>
-              <textarea value={form.bio} onChange={handleChange('bio')} className='w-full border rounded px-4 py-3' rows={4} />
+              <label className='block mb-1.5 text-xs font-semibold text-slate-700'>Bio</label>
+              <textarea value={form.bio} onChange={handleChange('bio')} className='w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none' rows={3} placeholder='Tell the community about yourself and your passions...' />
             </div>
             <div>
-              <label className='block mb-1 font-medium'>Languages (comma separated)</label>
-              <input value={form.languages} onChange={handleChange('languages')} className='w-full border rounded px-4 py-3' />
+              <label className='block mb-1.5 text-xs font-semibold text-slate-700'>Languages (comma separated)</label>
+              <input value={form.languages} onChange={handleChange('languages')} className='w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none' placeholder='e.g. English, Bengali' />
             </div>
             <div>
-              <label className='block mb-1 font-medium'>Profile picture</label>
-              {avatarPreview && <img src={avatarPreview} alt='avatar' className='w-24 h-24 object-cover rounded-full mb-2' />}
-              <input type='file' accept='image/*' onChange={(e) => { setAvatarFile(e.target.files[0] || null); setAvatarPreview(e.target.files[0] ? URL.createObjectURL(e.target.files[0]) : ''); }} />
+              <label className='block mb-1.5 text-xs font-semibold text-slate-700'>Profile Picture</label>
+              {avatarPreview && <img src={avatarPreview} alt='avatar' className='w-20 h-20 object-cover rounded-full mb-3 border shadow-sm' />}
+              <input type='file' accept='image/*' className='text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100' onChange={(e) => { setAvatarFile(e.target.files[0] || null); setAvatarPreview(e.target.files[0] ? URL.createObjectURL(e.target.files[0]) : ''); }} />
             </div>
-            <div>
-              <label className='block mb-1 font-medium'>Skills Offered (e.g. JavaScript (Programming), Graphic Design (Creative))</label>
-              <textarea value={form.skillsOffered} onChange={handleChange('skillsOffered')} className='w-full border rounded px-4 py-3' rows={4} />
+            <div className='p-5 bg-emerald-50/60 rounded-2xl border border-emerald-100 space-y-4'>
+              <h3 className='font-bold text-emerald-900 text-sm flex items-center gap-1.5'>
+                <span>🎯</span> Learning & Teaching Preferences
+              </h3>
+
+              <div>
+                <label className='block mb-1 text-xs font-semibold text-slate-700'>
+                  Skills You Want to Learn (comma-separated tags — powers Smart Matching)
+                </label>
+                <input
+                  value={form.skillsWanted}
+                  onChange={handleChange('skillsWanted')}
+                  className='w-full border border-slate-200 bg-white rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none'
+                  placeholder='e.g. React, Python, UI Design, Public Speaking'
+                />
+                <p className='text-[11px] text-slate-500 mt-1'>
+                  Dokkhota's smart matching engine uses these tags to recommend the most relevant skill providers and sessions.
+                </p>
+              </div>
+
+              <div>
+                <label className='block mb-1 text-xs font-semibold text-slate-700'>
+                  Skills Offered to Teach (e.g. JavaScript (Programming), Graphic Design (Creative))
+                </label>
+                <textarea
+                  value={form.skillsOffered}
+                  onChange={handleChange('skillsOffered')}
+                  className='w-full border border-slate-200 bg-white rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none'
+                  rows={3}
+                  placeholder='e.g. Node.js (Programming), Figma (Design)'
+                />
+              </div>
             </div>
-            <button type='submit' className='bg-green-600 text-white rounded-full px-6 py-3 hover:bg-green-700'>Save profile</button>
+
+            <button type='submit' className='bg-emerald-600 text-white font-medium rounded-xl px-8 py-3.5 hover:bg-emerald-700 transition shadow-sm text-sm'>
+              Save Profile
+            </button>
           </form>
         </div>
       </div>

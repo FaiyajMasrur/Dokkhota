@@ -1,11 +1,14 @@
-// Socket.IO event handler for Dokkhota real-time features
-// Supports: Chat messaging, Typing indicators, WebRTC video call signaling
 const Message = require('../models/Message');
+const { createNotification } = require('../utils/notificationHelper');
+
+// Track ongoing session call states: bookingId -> { from, to, fromName, bookingId, startedAt }
+const activeCalls = new Map();
 
 module.exports = (io, socket) => {
   // ── Join personal room by userId ──────────────────────────────────────
   socket.on('join', (userId) => {
     if (userId) {
+      socket.userId = userId.toString();
       socket.join(userId.toString());
       console.log(`Socket ${socket.id} joined user room: ${userId}`);
     }
@@ -57,28 +60,81 @@ module.exports = (io, socket) => {
     }
   });
 
+  socket.on('message_reaction', ({ receiverId, messageId, reactions }) => {
+    if (receiverId) {
+      io.to(receiverId.toString()).emit('message_reaction', { messageId, reactions });
+    }
+  });
+
   // ═══════════════════════════════════════════════════════════════════════
   //  WEBRTC VIDEO CALL SIGNALING
   // ═══════════════════════════════════════════════════════════════════════
 
-  socket.on('call_user', ({ from, to, fromName, bookingId }) => {
-    console.log(`[Video] ${from} is calling ${to} for booking ${bookingId}`);
+  socket.on('call_user', async ({ from, to, fromName, bookingId }) => {
+    console.log(`[Video] ${from} (${fromName}) is calling ${to} for booking ${bookingId}`);
+    if (bookingId) {
+      activeCalls.set(bookingId.toString(), {
+        from,
+        to,
+        fromName,
+        bookingId,
+        startedAt: Date.now(),
+      });
+    }
+
     if (to) {
       io.to(to.toString()).emit('incoming_call', { from, fromName, bookingId });
+
+      // Save notification in database with direct link for existing notification panel
+      try {
+        await createNotification({
+          userId: to,
+          title: 'Incoming Session Call 📞',
+          message: `${fromName || 'Partner'} is calling you for your session. Click Join Call.`,
+          type: 'call',
+          link: `/session/${bookingId}`,
+          bookingId: bookingId || null,
+        });
+      } catch (err) {
+        console.error('Error saving call notification:', err.message);
+      }
     }
   });
 
-  socket.on('accept_call', ({ from, to }) => {
+  // When B enters /session/:bookingId, check if A is currently calling
+  socket.on('check_call_status', ({ bookingId }) => {
+    if (bookingId && activeCalls.has(bookingId.toString())) {
+      const call = activeCalls.get(bookingId.toString());
+      // Check if the call was initiated within the last 10 minutes
+      if (Date.now() - call.startedAt < 10 * 60 * 1000) {
+        socket.emit('incoming_call', {
+          from: call.from,
+          fromName: call.fromName,
+          bookingId: call.bookingId,
+        });
+      } else {
+        activeCalls.delete(bookingId.toString());
+      }
+    }
+  });
+
+  socket.on('accept_call', ({ from, to, bookingId }) => {
     console.log(`[Video] ${to} accepted call from ${from}`);
+    if (bookingId) {
+      activeCalls.delete(bookingId.toString());
+    }
     if (from) {
-      io.to(from.toString()).emit('call_accepted', { from: to });
+      io.to(from.toString()).emit('call_accepted', { from: to, bookingId });
     }
   });
 
-  socket.on('reject_call', ({ from, to }) => {
+  socket.on('reject_call', ({ from, to, bookingId }) => {
     console.log(`[Video] ${to} rejected call from ${from}`);
+    if (bookingId) {
+      activeCalls.delete(bookingId.toString());
+    }
     if (from) {
-      io.to(from.toString()).emit('call_rejected', { from: to });
+      io.to(from.toString()).emit('call_rejected', { from: to, bookingId });
     }
   });
 
@@ -88,7 +144,10 @@ module.exports = (io, socket) => {
     }
   });
 
-  socket.on('end_call', ({ to }) => {
+  socket.on('end_call', ({ to, bookingId }) => {
+    if (bookingId) {
+      activeCalls.delete(bookingId.toString());
+    }
     if (to) {
       io.to(to.toString()).emit('call_ended');
     }

@@ -8,7 +8,16 @@ const RequestBoardPage = () => {
   const { accessToken, user, isAuthenticated } = useAuth();
   const [requests, setRequests] = useState([]);
   const [myRequests, setMyRequests] = useState([]);
-  const [form, setForm] = useState({ title: '', category: '', description: '', preferredFormat: 'online', preferredBudget: '0', tags: '' });
+  const [form, setForm] = useState({
+    title: '',
+    category: '',
+    description: '',
+    currentLevel: 'beginner',
+    preferredFormat: 'online',
+    preferredBudget: '0',
+    availableTimeSlots: '',
+    tags: '',
+  });
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -48,7 +57,16 @@ const RequestBoardPage = () => {
       };
       const response = await requestService.createRequest(payload, accessToken);
       if (response.data?.success) {
-        setForm({ title: '', category: '', description: '', preferredFormat: 'online', preferredBudget: '0', tags: '' });
+        setForm({
+          title: '',
+          category: '',
+          description: '',
+          currentLevel: 'beginner',
+          preferredFormat: 'online',
+          preferredBudget: '0',
+          availableTimeSlots: '',
+          tags: '',
+        });
         setMessage('Request posted successfully.');
         fetchRequests();
       }
@@ -101,18 +119,30 @@ const RequestBoardPage = () => {
         <div className='bg-white rounded-3xl p-8 shadow-sm mb-8'>
           <h1 className='text-3xl font-semibold mb-4'>Request Board</h1>
           <p className='text-gray-600 mb-6'>Post what you need and connect with peers who can help.</p>
-          {message && <div className='mb-4 text-sm text-green-700'>{message}</div>}
+          {message && <div className='mb-4 text-sm text-green-700 font-medium bg-green-50 p-3 rounded-xl border border-green-200'>{message}</div>}
           <form className='grid gap-4 md:grid-cols-2' onSubmit={handleCreate}>
-            <input value={form.title} onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))} className='border rounded px-4 py-3' placeholder='What do you need help with?' required />
-            <input value={form.category} onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))} className='border rounded px-4 py-3' placeholder='Category' required />
-            <textarea value={form.description} onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))} className='border rounded px-4 py-3 md:col-span-2' rows={3} placeholder='Describe your goal or the challenge.' required />
-            <select value={form.preferredFormat} onChange={(event) => setForm((prev) => ({ ...prev, preferredFormat: event.target.value }))} className='border rounded px-4 py-3'>
-              <option value='online'>Online</option>
-              <option value='in-person'>In person</option>
-            </select>
-            <input type='number' min='0' value={form.preferredBudget} onChange={(event) => setForm((prev) => ({ ...prev, preferredBudget: event.target.value }))} className='border rounded px-4 py-3' placeholder='Budget in credits' />
-            <input value={form.tags} onChange={(event) => setForm((prev) => ({ ...prev, tags: event.target.value }))} className='border rounded px-4 py-3 md:col-span-2' placeholder='Tags (comma separated)' />
-            <button type='submit' className='bg-green-600 text-white rounded-full px-5 py-3 hover:bg-green-700 md:col-span-2'>Post request</button>
+            <input value={form.title} onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))} className='border rounded-xl px-4 py-3 text-sm' placeholder='What do you need help with?' required />
+            <input value={form.category} onChange={(event) => setForm((prev) => ({ ...prev, category: event.target.value }))} className='border rounded-xl px-4 py-3 text-sm' placeholder='Category (e.g. Programming, Music)' required />
+            <textarea value={form.description} onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))} className='border rounded-xl px-4 py-3 md:col-span-2 text-sm' rows={3} placeholder='Describe your learning goal or current challenge in detail.' required />
+            <div>
+              <label className='block text-xs font-medium text-gray-600 mb-1'>Current Skill Level</label>
+              <select value={form.currentLevel} onChange={(event) => setForm((prev) => ({ ...prev, currentLevel: event.target.value }))} className='border rounded-xl px-4 py-3 text-sm w-full'>
+                <option value='beginner'>Beginner (Starting from scratch)</option>
+                <option value='intermediate'>Intermediate (Some knowledge)</option>
+                <option value='expert'>Advanced / Expert (Targeted guidance)</option>
+              </select>
+            </div>
+            <div>
+              <label className='block text-xs font-medium text-gray-600 mb-1'>Preferred Format</label>
+              <select value={form.preferredFormat} onChange={(event) => setForm((prev) => ({ ...prev, preferredFormat: event.target.value }))} className='border rounded-xl px-4 py-3 text-sm w-full'>
+                <option value='online'>Online Video / Voice Call</option>
+                <option value='in-person'>In Person</option>
+              </select>
+            </div>
+            <input type='number' min='0' value={form.preferredBudget} onChange={(event) => setForm((prev) => ({ ...prev, preferredBudget: event.target.value }))} className='border rounded-xl px-4 py-3 text-sm' placeholder='Budget in Skill Credits (SC)' />
+            <input value={form.availableTimeSlots} onChange={(event) => setForm((prev) => ({ ...prev, availableTimeSlots: event.target.value }))} className='border rounded-xl px-4 py-3 text-sm' placeholder='Available time slots (e.g., Weekday evenings, Sat 2-5 PM)' />
+            <input value={form.tags} onChange={(event) => setForm((prev) => ({ ...prev, tags: event.target.value }))} className='border rounded-xl px-4 py-3 md:col-span-2 text-sm' placeholder='Tags (comma separated, e.g. react, javascript, node)' />
+            <button type='submit' className='bg-green-600 text-white font-medium rounded-full px-5 py-3 hover:bg-green-700 md:col-span-2 transition shadow-sm'>Post skill request</button>
           </form>
         </div>
 

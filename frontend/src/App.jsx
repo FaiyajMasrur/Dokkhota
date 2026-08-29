@@ -1,8 +1,5 @@
-
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-
-import { Suspense, lazy } from 'react';
-
+import { Suspense } from 'react';
 
 import Navbar from './components/Navbar.jsx';
 
@@ -16,9 +13,9 @@ import DashboardPage from './pages/DashboardPage.jsx';
 import CreditHistoryPage from './pages/CreditHistoryPage.jsx';
 
 import MessagesPage from './pages/MessagesPage.jsx';
-import MessageThreadPage from './pages/MessageThreadPage.jsx'
+import MessageThreadPage from './pages/MessageThreadPage.jsx';
 
-//import VideoSessionPage from './pages/VideoSessionPage.jsx';
+import VideoSessionPage from './pages/VideoSessionPage.jsx';
 
 import LeaderboardPage from './pages/LeaderboardPage.jsx';
 import RequestBoardPage from './pages/RequestBoardPage.jsx';
@@ -34,11 +31,9 @@ import RegisterPage from './pages/RegisterPage.jsx';
 import VerifyEmailPage from './pages/VerifyEmailPage.jsx';
 import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
-import NotificationsPage from "./pages/NotificationsPage";
-import SessionHistoryPage from "./pages/SessionHistoryPage";
+import NotificationsPage from './pages/NotificationsPage.jsx';
+import SessionHistoryPage from './pages/SessionHistoryPage.jsx';
 import CreateListingPage from './pages/CreateListingPage.jsx';
-
-const VideoSessionPage = lazy(() => import('./pages/VideoSessionPage.jsx'));
 
 function App() {
   return (
@@ -70,9 +65,9 @@ function App() {
           <Route path='/verify-email' element={<VerifyEmailPage />} />
           <Route path='/forgot-password' element={<ForgotPasswordPage />} />
           <Route path='/reset-password/:token' element={<ResetPasswordPage />} />
-          <Route path="/credit-history" element={<CreditHistoryPage />} />
-          <Route path="/notifications" element={<NotificationsPage />} />
-          <Route path="/session-history" element={<SessionHistoryPage />} />
+          <Route path='/credit-history' element={<CreditHistoryPage />} />
+          <Route path='/notifications' element={<NotificationsPage />} />
+          <Route path='/session-history' element={<SessionHistoryPage />} />
           
           <Route path='*' element={<Navigate to='/' />} />
         </Routes>
@@ -80,7 +75,5 @@ function App() {
     </Router>
   );
 }
-
-      
 
 export default App;

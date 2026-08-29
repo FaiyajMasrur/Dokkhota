@@ -1,9 +1,9 @@
-// Skill listing detail page for Dokkhota showing listing details and provider info
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import skillService from '../services/skillService.js';
 import reviewService from '../services/reviewService.js';
+import ReportModal from '../components/ReportModal.jsx';
 
 const ListingDetailPage = () => {
   const { listingId } = useParams();
@@ -11,6 +11,7 @@ const ListingDetailPage = () => {
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState([]);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   useEffect(() => {
     const loadListing = async () => {
@@ -114,13 +115,29 @@ const ListingDetailPage = () => {
                 </div>
                 <Link
                   to={isAuthenticated ? `/book/${listing._id}` : '/login'}
-                  className='block w-full bg-green-700 text-white rounded-full px-4 py-3 hover:bg-green-800 text-center'
+                  className='block w-full bg-green-700 text-white rounded-full px-4 py-3 hover:bg-green-800 text-center transition'
                 >
                   {isAuthenticated ? 'Book session' : 'Log in to book'}
                 </Link>
+                <button
+                  type='button'
+                  onClick={() => setIsReportModalOpen(true)}
+                  className='w-full text-center text-xs text-red-500 hover:text-red-700 hover:underline pt-2 font-medium flex items-center justify-center gap-1'
+                >
+                  <span>🚩</span> Report this listing
+                </button>
               </div>
             </aside>
           </div>
+
+          <ReportModal
+            isOpen={isReportModalOpen}
+            onClose={() => setIsReportModalOpen(false)}
+            targetType='listing'
+            targetId={listing._id}
+            reportedUserId={listing.teacherId}
+            title='Report Skill Listing'
+          />
 
           {/* ── Reviews Section ──────────────────────────────────── */}
           <div className='mt-8 bg-white rounded-3xl p-8 shadow-sm'>

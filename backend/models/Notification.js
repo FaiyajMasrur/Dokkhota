@@ -20,8 +20,18 @@ const notificationSchema = new mongoose.Schema(
 
     type: {
       type: String,
-      enum: ["booking", "credit", "message"],
+      enum: ["booking", "credit", "message", "call", "general"],
       default: "booking",
+    },
+
+    link: {
+      type: String,
+      default: "",
+    },
+
+    bookingId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Booking",
     },
 
     isRead: {

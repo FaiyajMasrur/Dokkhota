@@ -18,6 +18,7 @@ const userSchema = new mongoose.Schema(
     skillsWanted: [{ type: String }],
     isVerified: { type: Boolean, default: false },
     isSuspended: { type: Boolean, default: false },
+    suspensionReason: { type: String, default: '' },
     streakCount: { type: Number, default: 0 },
     lastSessionWeek: { type: Date },
     otpCode: { type: String },

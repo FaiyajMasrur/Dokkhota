@@ -182,16 +182,38 @@ const BookingCard = ({ booking, userId, onStatusChange, actionLoading }) => {
             </button>
             <button
               disabled={actionLoading}
-              onClick={() => onStatusChange(booking._id, 'cancelled')}
+              onClick={() => {
+                const reason = window.prompt('Please enter a cancellation reason (optional):');
+                if (reason !== null) onStatusChange(booking._id, 'cancelled', reason);
+              }}
               className='px-4 py-2 text-sm font-medium rounded-xl bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition shadow-sm'
             >
               Cancel session
             </button>
+            <button
+              disabled={actionLoading}
+              onClick={() => {
+                if (window.confirm('Report this session as a No-Show? This will resolve credits appropriately.')) {
+                  onStatusChange(booking._id, 'no-show');
+                }
+              }}
+              className='px-3 py-2 text-xs font-medium rounded-xl border border-amber-500 text-amber-700 hover:bg-amber-50 disabled:opacity-50 transition'
+              title="Report partner did not attend"
+            >
+              ⚠️ Report No-Show
+            </button>
           </>
         )}
 
-        {(booking.status === 'rejected' || booking.status === 'cancelled') && (
-          <span className='text-xs text-gray-400 italic py-2'>No actions available</span>
+        {(booking.status === 'rejected' || booking.status === 'cancelled' || booking.status === 'no-show') && (
+          <div className='flex flex-col text-xs text-gray-500 py-1'>
+            {booking.cancellationReason && (
+              <span className='italic text-red-600'>Reason: {booking.cancellationReason}</span>
+            )}
+            {booking.penaltyAmount > 0 && (
+              <span className='text-amber-700 font-medium'>Late penalty applied: {booking.penaltyAmount} SC</span>
+            )}
+          </div>
         )}
 
         {booking.status === 'completed' && (
@@ -226,7 +248,10 @@ const DashboardPage = () => {
   const [myListings, setMyListings] = useState([]);
   const [credits, setCredits] = useState({ creditBalance: 0, heldCredits: 0, availableBalance: 0 });
   const [bookings, setBookings] = useState([]);
+  const [recommendations, setRecommendations] = useState([]);
+  const [recommendationBasis, setRecommendationBasis] = useState('');
   const [loading, setLoading] = useState(true);
+  const [recLoading, setRecLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState(null); // { type: 'success' | 'error', text }
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'teaching' | 'learning'
@@ -235,22 +260,35 @@ const DashboardPage = () => {
   const loadData = async () => {
     if (!isAuthenticated) {
       setLoading(false);
+      setRecLoading(false);
       return;
     }
     try {
-      const [listingsResponse, creditsResponse, bookingsResponse] = await Promise.all([
+      const [listingsResponse, creditsResponse, bookingsResponse, recsResponse] = await Promise.allSettled([
         skillService.getMyListings(accessToken),
         creditService.getBalance(accessToken),
         bookingService.getBookings(accessToken),
+        skillService.getRecommendedListings(accessToken),
       ]);
-      setMyListings(listingsResponse.data.listings || []);
-      setCredits(creditsResponse.data || { creditBalance: 0, heldCredits: 0, availableBalance: 0 });
-      setBookings(bookingsResponse.data.bookings || []);
+
+      if (listingsResponse.status === 'fulfilled') {
+        setMyListings(listingsResponse.value.data?.listings || []);
+      }
+      if (creditsResponse.status === 'fulfilled') {
+        setCredits(creditsResponse.value.data || { creditBalance: 0, heldCredits: 0, availableBalance: 0 });
+      }
+      if (bookingsResponse.status === 'fulfilled') {
+        setBookings(bookingsResponse.value.data?.bookings || []);
+      }
+      if (recsResponse.status === 'fulfilled') {
+        setRecommendations(recsResponse.value.data?.recommendations || []);
+        setRecommendationBasis(recsResponse.value.data?.basedOn || '');
+      }
     } catch (error) {
-      setMyListings([]);
-      setBookings([]);
+      console.error('Error loading dashboard data:', error);
     } finally {
       setLoading(false);
+      setRecLoading(false);
     }
   };
 
@@ -259,11 +297,15 @@ const DashboardPage = () => {
   }, [accessToken, isAuthenticated]);
 
   // ── Handle status change with loading state ────────────────────────
-  const handleStatusChange = async (bookingId, newStatus) => {
+  const handleStatusChange = async (bookingId, newStatus, cancellationReason = '') => {
     setActionLoading(true);
     setStatusMsg(null);
     try {
-      await bookingService.updateBookingStatus(bookingId, newStatus, accessToken);
+      await bookingService.updateBookingStatus(
+        bookingId,
+        { status: newStatus, cancellationReason },
+        accessToken
+      );
       setStatusMsg({ type: 'success', text: `Session marked as ${newStatus} successfully!` });
       await loadData();
     } catch (err) {
@@ -272,6 +314,39 @@ const DashboardPage = () => {
     } finally {
       setActionLoading(false);
       setTimeout(() => setStatusMsg(null), 4000);
+    }
+  };
+
+  // ── Handle listing toggle (activate / deactivate) ──────────────────
+  const handleToggleListing = async (listingId) => {
+    setActionLoading(true);
+    try {
+      await skillService.toggleListing(listingId, accessToken);
+      setStatusMsg({ type: 'success', text: 'Listing status updated!' });
+      await loadData();
+    } catch (err) {
+      setStatusMsg({ type: 'error', text: err.response?.data?.message || 'Failed to update listing' });
+    } finally {
+      setActionLoading(false);
+      setTimeout(() => setStatusMsg(null), 3000);
+    }
+  };
+
+  // ── Handle listing delete ──────────────────────────────────────────
+  const handleDeleteListing = async (listingId, title) => {
+    if (!window.confirm(`Are you sure you want to delete "${title}"? This cannot be undone.`)) {
+      return;
+    }
+    setActionLoading(true);
+    try {
+      await skillService.deleteListing(listingId, accessToken);
+      setStatusMsg({ type: 'success', text: 'Listing deleted successfully!' });
+      await loadData();
+    } catch (err) {
+      setStatusMsg({ type: 'error', text: err.response?.data?.message || 'Failed to delete listing' });
+    } finally {
+      setActionLoading(false);
+      setTimeout(() => setStatusMsg(null), 3000);
     }
   };
 
@@ -291,39 +366,140 @@ const DashboardPage = () => {
   const teachCount = bookings.filter((b) => b.teacherId?._id === userId || b.teacherId === userId).length;
   const learnCount = bookings.filter((b) => b.studentId?._id === userId || b.studentId === userId).length;
   const pendingCount = bookings.filter((b) => b.status === 'pending').length;
+  const streakCount = user?.streakCount || 0;
 
   return (
     <div className='min-h-screen bg-slate-50'>
       <div className='max-w-6xl mx-auto px-4 py-10'>
 
         {/* ── Top stats cards ─────────────────────────────────────── */}
-        <div className='grid gap-6 md:grid-cols-4 mb-10'>
-          <div className='bg-white rounded-3xl p-6 shadow-sm'>
-            <p className='text-sm text-gray-500'>Welcome back</p>
-            <h2 className='text-2xl font-semibold'>{user?.name || 'Guest'}</h2>
+        <div className='grid gap-5 md:grid-cols-4 mb-8'>
+          <div className='bg-white rounded-3xl p-6 shadow-sm border border-slate-100'>
+            <p className='text-xs font-medium text-slate-500 uppercase tracking-wider'>Welcome back</p>
+            <h2 className='text-xl font-bold text-slate-800 mt-1 truncate'>{user?.name || 'Guest'}</h2>
+            {streakCount > 0 ? (
+              <span className='inline-flex items-center gap-1 text-xs font-bold text-orange-700 bg-orange-100 px-2.5 py-0.5 rounded-full mt-2'>
+                🔥 {streakCount}-Week Teaching Streak!
+              </span>
+            ) : (
+              <span className='inline-flex items-center gap-1 text-[11px] text-slate-400 mt-2'>
+                Teach a session this week to start a streak!
+              </span>
+            )}
           </div>
-          <div className='bg-white rounded-3xl p-6 shadow-sm'>
-            <p className='text-sm text-gray-500'>Available credits</p>
-            <h2 className='text-2xl font-semibold text-green-700'>{credits.creditBalance ?? user?.creditBalance ?? 0} SC</h2>
+
+          <div className='bg-white rounded-3xl p-6 shadow-sm border border-slate-100'>
+            <p className='text-xs font-medium text-slate-500 uppercase tracking-wider'>Available credits</p>
+            <h2 className='text-2xl font-bold text-emerald-700 mt-1'>{credits.creditBalance ?? user?.creditBalance ?? 0} SC</h2>
+            <Link to='/credit-history' className='text-xs text-emerald-600 hover:underline mt-2 inline-block font-medium'>
+              View credit ledger →
+            </Link>
           </div>
-          <div className='bg-white rounded-3xl p-6 shadow-sm'>
-            <p className='text-sm text-gray-500'>Held credits</p>
-            <h2 className='text-2xl font-semibold text-yellow-600'>{credits.heldCredits ?? user?.heldCredits ?? 0} SC</h2>
+
+          <div className='bg-white rounded-3xl p-6 shadow-sm border border-slate-100'>
+            <p className='text-xs font-medium text-slate-500 uppercase tracking-wider'>Held in Escrow</p>
+            <h2 className='text-2xl font-bold text-amber-600 mt-1'>{credits.heldCredits ?? user?.heldCredits ?? 0} SC</h2>
+            <p className='text-[11px] text-slate-400 mt-2'>Held for upcoming sessions</p>
           </div>
-          <div className='bg-white rounded-3xl p-6 shadow-sm'>
-            <p className='text-sm text-gray-500'>Pending sessions</p>
-            <h2 className='text-2xl font-semibold text-blue-600'>{pendingCount}</h2>
+
+          <div className='bg-white rounded-3xl p-6 shadow-sm border border-slate-100'>
+            <p className='text-xs font-medium text-slate-500 uppercase tracking-wider'>Pending Sessions</p>
+            <h2 className='text-2xl font-bold text-blue-600 mt-1'>{pendingCount}</h2>
+            <p className='text-[11px] text-slate-400 mt-2'>{bookings.length} total active sessions</p>
           </div>
         </div>
 
+        {/* ── FR-13: Smart Matches / Recommendations Section ─────── */}
+        <div className='bg-gradient-to-br from-emerald-900 to-slate-900 rounded-3xl p-6 md:p-8 text-white shadow-md mb-8'>
+          <div className='flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6'>
+            <div>
+              <div className='flex items-center gap-2'>
+                <span className='bg-emerald-500/30 text-emerald-300 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider'>
+                  🎯 Smart Matching Engine
+                </span>
+                {recommendationBasis && (
+                  <span className='text-xs text-emerald-200/80'>
+                    Based on: <strong className='text-white'>{recommendationBasis}</strong>
+                  </span>
+                )}
+              </div>
+              <h2 className='text-2xl font-bold mt-2'>Recommended Skill Providers For You</h2>
+              <p className='text-slate-300 text-xs mt-1'>
+                Personalized matches based on your learning interests and provider quality scores.
+              </p>
+            </div>
+            <Link
+              to='/profile/edit'
+              className='text-xs font-medium bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl transition border border-white/20 whitespace-nowrap'
+            >
+              ⚙️ Customize Learning Goals
+            </Link>
+          </div>
+
+          {recLoading ? (
+            <p className='text-xs text-slate-400'>Analyzing compatibility & finding smart matches...</p>
+          ) : recommendations.length > 0 ? (
+            <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
+              {recommendations.slice(0, 4).map((rec) => (
+                <div
+                  key={rec._id}
+                  className='bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex flex-col justify-between hover:bg-white/15 transition'
+                >
+                  <div>
+                    <div className='flex items-center justify-between gap-2 mb-2'>
+                      <span className='text-[11px] font-extrabold bg-emerald-400 text-slate-950 px-2.5 py-0.5 rounded-full shadow-sm'>
+                        ✨ {rec.matchScore}% Match
+                      </span>
+                      <span className='text-xs font-bold text-emerald-300'>{rec.creditCost} SC</span>
+                    </div>
+                    <h3 className='font-bold text-sm text-white line-clamp-1'>{rec.title}</h3>
+                    <p className='text-[11px] text-slate-300 line-clamp-2 mt-1'>{rec.description}</p>
+                    <div className='flex items-center gap-1.5 mt-3 text-xs text-slate-200'>
+                      <div className='w-5 h-5 rounded-full bg-emerald-700 flex items-center justify-center text-[10px] font-bold'>
+                        {rec.teacherId?.name?.[0] || 'T'}
+                      </div>
+                      <span className='truncate font-medium'>{rec.teacherId?.name}</span>
+                      {rec.teacherId?.isVerified && <span className='text-blue-400 text-xs'>✓</span>}
+                      {rec.teacherId?.streakCount > 0 && (
+                        <span className='text-orange-400 text-[10px] font-bold'>🔥{rec.teacherId.streakCount}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className='pt-3 mt-3 border-t border-white/10 flex gap-2'>
+                    <Link
+                      to={`/listing/${rec._id}`}
+                      className='flex-1 py-1.5 text-center text-xs font-semibold rounded-lg bg-white text-slate-900 hover:bg-slate-100 transition shadow-sm'
+                    >
+                      View Details
+                    </Link>
+                    <Link
+                      to={`/book/${rec._id}`}
+                      className='py-1.5 px-3 text-center text-xs font-semibold rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition'
+                    >
+                      Book
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className='text-xs text-slate-400'>
+              No listings match your learning profile yet. Explore all listings or update your profile!
+            </p>
+          )}
+        </div>
+
         {/* ── Main content card ───────────────────────────────────── */}
-        <div className='bg-white rounded-3xl p-8 shadow-sm mb-10'>
+        <div className='bg-white rounded-3xl p-8 shadow-sm mb-10 border border-slate-100'>
           <div className='flex items-center justify-between mb-6'>
             <div>
-              <h1 className='text-3xl font-semibold'>Dashboard</h1>
-              <p className='text-gray-600'>Manage your profile, listings, and sessions.</p>
+              <h1 className='text-3xl font-bold text-slate-800'>Session Management</h1>
+              <p className='text-gray-500 text-sm'>Manage your scheduled sessions, teaching offers, and listings.</p>
             </div>
-            <Link to='/create-listing' className='bg-green-600 text-white rounded-full px-5 py-3 hover:bg-green-700 transition'>Create listing</Link>
+            <Link to='/create-listing' className='bg-emerald-600 text-white rounded-xl px-5 py-2.5 hover:bg-emerald-700 transition text-sm font-medium shadow-sm'>
+              + Create Listing
+            </Link>
           </div>
 
           {/* ── Status toast ──────────────────────────────────────── */}
@@ -333,7 +509,7 @@ const DashboardPage = () => {
             </div>
           )}
 
-          <div className='grid gap-8 lg:grid-cols-[1fr_2fr]'>
+          <div className='grid gap-8 lg:grid-cols-[1.1fr_1.9fr]'>
 
             {/* ── Left column: Listings ────────────────────────────── */}
             <div>
@@ -343,12 +519,35 @@ const DashboardPage = () => {
               ) : myListings.length > 0 ? (
                 <div className='grid gap-4'>
                   {myListings.map((listing) => (
-                    <div key={listing._id} className='border rounded-2xl p-4 flex items-center justify-between hover:shadow-sm transition'>
-                      <div>
-                        <h3 className='font-semibold'>{listing.title}</h3>
-                        <p className='text-sm text-gray-500'>{listing.category}</p>
+                    <div key={listing._id} className='border rounded-2xl p-4 flex flex-col justify-between hover:shadow-sm transition bg-white gap-3'>
+                      <div className='flex items-start justify-between'>
+                        <div>
+                          <h3 className='font-semibold text-gray-900'>{listing.title}</h3>
+                          <p className='text-xs text-gray-500 mt-0.5'>{listing.category} • {listing.creditCost} SC</p>
+                        </div>
+                        <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${listing.isActive !== false ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+                          {listing.isActive !== false ? 'Active' : 'Inactive'}
+                        </span>
                       </div>
-                      <Link to={`/listing/${listing._id}`} className='text-green-700 hover:underline'>View</Link>
+                      <div className='flex items-center gap-2 pt-2 border-t text-xs'>
+                        <Link to={`/listing/${listing._id}`} className='text-green-700 font-medium hover:underline'>View</Link>
+                        <span className='text-gray-300'>|</span>
+                        <button
+                          disabled={actionLoading}
+                          onClick={() => handleToggleListing(listing._id)}
+                          className='text-blue-600 font-medium hover:underline disabled:opacity-50'
+                        >
+                          {listing.isActive !== false ? 'Deactivate' : 'Activate'}
+                        </button>
+                        <span className='text-gray-300'>|</span>
+                        <button
+                          disabled={actionLoading}
+                          onClick={() => handleDeleteListing(listing._id, listing.title)}
+                          className='text-red-500 font-medium hover:underline disabled:opacity-50'
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

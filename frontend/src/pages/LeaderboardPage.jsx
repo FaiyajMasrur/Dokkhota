@@ -1,18 +1,27 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import leaderboardService from "../services/leaderboardService.js";
+import categoryService from "../services/categoryService.js";
 
 const LeaderboardPage = () => {
   const [users, setUsers] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [sortBy, setSortBy] = useState("rating"); // 'rating' | 'sessions' | 'credits'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    categoryService.getCategories()
+      .then((res) => setCategories(res.data?.categories || []))
+      .catch(() => {});
+  }, []);
 
   const loadLeaderboard = async () => {
     try {
       setLoading(true);
       setError("");
-      const data = await leaderboardService.getLeaderboard(sortBy);
+      const data = await leaderboardService.getLeaderboard(sortBy, selectedCategory);
       if (data.users) {
         setUsers(data.users);
       }
@@ -26,7 +35,7 @@ const LeaderboardPage = () => {
 
   useEffect(() => {
     loadLeaderboard();
-  }, [sortBy]);
+  }, [sortBy, selectedCategory]);
 
   const topThree = users.slice(0, 3);
   const remainingUsers = users.slice(3);
@@ -43,38 +52,54 @@ const LeaderboardPage = () => {
               </p>
             </div>
 
-            {/* Sorting controls */}
-            <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl">
-              <button
-                onClick={() => setSortBy("rating")}
-                className={`text-xs font-semibold px-3 py-2 rounded-xl transition ${
-                  sortBy === "rating"
-                    ? "bg-white text-emerald-700 shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
+            {/* Sorting & Category controls */}
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Category Dropdown Filter */}
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="text-xs font-semibold px-3 py-2.5 rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
-                Top Rated ★
-              </button>
-              <button
-                onClick={() => setSortBy("sessions")}
-                className={`text-xs font-semibold px-3 py-2 rounded-xl transition ${
-                  sortBy === "sessions"
-                    ? "bg-white text-emerald-700 shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Most Sessions 🎓
-              </button>
-              <button
-                onClick={() => setSortBy("credits")}
-                className={`text-xs font-semibold px-3 py-2 rounded-xl transition ${
-                  sortBy === "credits"
-                    ? "bg-white text-emerald-700 shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Top Credits 💰
-              </button>
+                <option value="">All Categories</option>
+                {categories.map((c) => (
+                  <option key={c._id || c.name} value={c.name}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+
+              <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl">
+                <button
+                  onClick={() => setSortBy("rating")}
+                  className={`text-xs font-semibold px-3 py-2 rounded-xl transition ${
+                    sortBy === "rating"
+                      ? "bg-white text-emerald-700 shadow-sm"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Top Rated ★
+                </button>
+                <button
+                  onClick={() => setSortBy("sessions")}
+                  className={`text-xs font-semibold px-3 py-2 rounded-xl transition ${
+                    sortBy === "sessions"
+                      ? "bg-white text-emerald-700 shadow-sm"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Most Sessions 🎓
+                </button>
+                <button
+                  onClick={() => setSortBy("credits")}
+                  className={`text-xs font-semibold px-3 py-2 rounded-xl transition ${
+                    sortBy === "credits"
+                      ? "bg-white text-emerald-700 shadow-sm"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Top Credits 💰
+                </button>
+              </div>
             </div>
           </div>
 
@@ -220,6 +245,11 @@ const LeaderboardPage = () => {
                               {user.name}
                               {user.isVerified && (
                                 <span className="text-blue-600 text-xs font-bold" title="Verified Badge">✓</span>
+                              )}
+                              {user.streakCount > 0 && (
+                                <span className="bg-orange-100 text-orange-800 text-[10px] font-extrabold px-1.5 py-0.5 rounded-md" title={`${user.streakCount}-week streak`}>
+                                  🔥 {user.streakCount}w
+                                </span>
                               )}
                             </div>
                             <div className="text-xs text-slate-400">{user.city || "Provider"}</div>

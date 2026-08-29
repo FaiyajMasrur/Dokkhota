@@ -65,6 +65,19 @@ const createReview = async (req, res, next) => {
 
     await review.populate('reviewerId', 'name avatarUrl');
 
+    // Notify reviewee about new review
+    const io = req.app.get('io');
+    const { createNotification } = require('../utils/notificationHelper');
+    await createNotification({
+      userId: revieweeId,
+      title: 'New Review Received ⭐',
+      message: `${req.user.name || 'Your partner'} gave you a ${rating}-star review for your completed session!`,
+      type: 'general',
+      link: `/profile/${revieweeId}`,
+      bookingId,
+      io,
+    });
+
     return res.status(201).json({ success: true, review });
   } catch (error) {
     if (error.code === 11000) {

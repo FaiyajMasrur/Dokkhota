@@ -165,8 +165,6 @@ const searchListings = async (req, res, next) => {
       .populate('teacherId', 'name avatarUrl city')
       .sort(selectedSort)
       .skip((currentPage - 1) * pageSize)
-      .limit(pageSize);
-
     const totalResults = await SkillListing.countDocuments(searchFilter);
 
     return res.status(200).json({
@@ -182,6 +180,122 @@ const searchListings = async (req, res, next) => {
   }
 };
 
+const User = require('../models/User');
+
+const getRecommendedListings = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    let skillsWanted = [];
+    if (userId) {
+      const user = await User.findById(userId);
+      if (user && user.skillsWanted) {
+        skillsWanted = user.skillsWanted;
+      }
+    }
+
+    // Exclude current user's listings and inactive listings
+    const query = { isActive: true };
+    if (userId) {
+      query.teacherId = { $ne: userId };
+    }
+
+    const allListings = await SkillListing.find(query).populate(
+      'teacherId',
+      'name avatarUrl city isVerified streakCount'
+    );
+
+    // If no specific skillsWanted, return high rated and trending active listings
+    if (!skillsWanted || skillsWanted.length === 0) {
+      const trending = allListings
+        .map((listing) => ({
+          ...listing.toObject(),
+          matchScore: 80,
+          matchedSkills: ['Trending Skill'],
+        }))
+        .sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0))
+        .slice(0, 8);
+
+      return res.status(200).json({
+        success: true,
+        recommendations: trending,
+        basedOn: 'Trending & Top Rated',
+      });
+    }
+
+    // Score each listing based on user's skillsWanted
+    const scored = allListings.map((listing) => {
+      let score = 0;
+      const matched = [];
+
+      const titleLower = (listing.title || '').toLowerCase();
+      const descLower = (listing.description || '').toLowerCase();
+      const catLower = (listing.category || '').toLowerCase();
+      const tagsLower = (listing.tags || []).map((t) => t.toLowerCase());
+
+      skillsWanted.forEach((wanted) => {
+        const wLower = wanted.toLowerCase().trim();
+        if (!wLower) return;
+
+        let found = false;
+        if (titleLower.includes(wLower)) {
+          score += 40;
+          found = true;
+        }
+        if (tagsLower.some((t) => t.includes(wLower) || wLower.includes(t))) {
+          score += 30;
+          found = true;
+        }
+        if (catLower.includes(wLower)) {
+          score += 20;
+          found = true;
+        }
+        if (descLower.includes(wLower)) {
+          score += 10;
+          found = true;
+        }
+
+        if (found && !matched.includes(wanted)) {
+          matched.push(wanted);
+        }
+      });
+
+      // Provider rating boost
+      score += (listing.averageRating || 4.5) * 3;
+
+      // Provider streak boost
+      const streak = listing.teacherId?.streakCount || 0;
+      score += Math.min(streak, 5) * 2;
+
+      // Verified provider boost
+      if (listing.teacherId?.isVerified) {
+        score += 5;
+      }
+
+      // Convert score to a percentage representation
+      const matchPercentage = Math.min(Math.round((score / 100) * 100), 99);
+
+      return {
+        ...listing.toObject(),
+        matchScore: Math.max(matchPercentage, 50),
+        matchedSkills: matched.length > 0 ? matched : ['Related Interest'],
+      };
+    });
+
+    // Sort by match score descending
+    scored.sort((a, b) => b.matchScore - a.matchScore);
+
+    const recommendations = scored.slice(0, 8);
+
+    return res.status(200).json({
+      success: true,
+      recommendations,
+      basedOn: skillsWanted.join(', '),
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 module.exports = {
   createListing,
   updateListing,
@@ -190,4 +304,5 @@ module.exports = {
   getMyListings,
   getListingById,
   searchListings,
+  getRecommendedListings,
 };

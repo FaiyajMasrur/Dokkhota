@@ -7,8 +7,10 @@ const skillRequestSchema = new mongoose.Schema(
     title: { type: String, required: true, trim: true },
     category: { type: String, required: true, trim: true },
     description: { type: String, required: true, trim: true },
+    currentLevel: { type: String, enum: ['beginner', 'intermediate', 'expert'], default: 'beginner' },
     preferredFormat: { type: String, enum: ['online', 'in-person'], default: 'online' },
     preferredBudget: { type: Number, default: 0, min: 0 },
+    availableTimeSlots: { type: String, default: '', trim: true },
     status: { type: String, enum: ['open', 'matched', 'closed'], default: 'open' },
     tags: [{ type: String, trim: true }],
     responses: [

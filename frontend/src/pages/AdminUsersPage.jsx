@@ -26,12 +26,21 @@ const AdminUsersPage = () => {
     loadUsers();
   }, []);
 
-  const suspendUser = async (id) => {
+  const suspendUser = async (id, userName) => {
+    const reason = window.prompt(
+      `Please provide a reason for suspending ${userName || 'this user'} (mandatory):`
+    );
+    if (!reason || !reason.trim()) {
+      alert('A suspension reason is mandatory.');
+      return;
+    }
+
     try {
-      await adminService.suspendUser(id);
+      await adminService.suspendUser(id, reason.trim());
       loadUsers();
     } catch (err) {
       console.error("Suspend error:", err);
+      setError(err.response?.data?.message || "Failed to suspend user.");
     }
   };
 
@@ -41,20 +50,22 @@ const AdminUsersPage = () => {
       loadUsers();
     } catch (err) {
       console.error("Activate error:", err);
+      setError(err.response?.data?.message || "Failed to activate user.");
     }
   };
 
-  const deleteUser = async (id) => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to permanently delete this user account?"
+  const deleteUser = async (id, userName) => {
+    const reason = window.prompt(
+      `Are you sure you want to permanently delete ${userName || 'this user'}? Enter a reason:`
     );
-    if (!confirmDelete) return;
+    if (reason === null) return;
 
     try {
-      await adminService.deleteUser(id);
+      await adminService.deleteUser(id, reason.trim());
       loadUsers();
     } catch (err) {
       console.error("Delete error:", err);
+      setError(err.response?.data?.message || "Failed to delete user.");
     }
   };
 
@@ -147,9 +158,16 @@ const AdminUsersPage = () => {
 
                       <td className="p-4">
                         {user.isSuspended ? (
-                          <span className="bg-rose-100 text-rose-800 text-xs font-semibold px-2.5 py-1 rounded-full">
-                            Suspended
-                          </span>
+                          <div>
+                            <span className="bg-rose-100 text-rose-800 text-xs font-semibold px-2.5 py-1 rounded-full">
+                              Suspended
+                            </span>
+                            {user.suspensionReason && (
+                              <p className="text-[11px] text-rose-700 mt-1 max-w-xs truncate" title={user.suspensionReason}>
+                                Reason: {user.suspensionReason}
+                              </p>
+                            )}
+                          </div>
                         ) : (
                           <span className="bg-emerald-100 text-emerald-800 text-xs font-semibold px-2.5 py-1 rounded-full">
                             Active
@@ -161,7 +179,7 @@ const AdminUsersPage = () => {
                         <div className="flex items-center gap-2">
                           {!user.isSuspended ? (
                             <button
-                              onClick={() => suspendUser(user._id)}
+                              onClick={() => suspendUser(user._id, user.name)}
                               className="text-xs bg-amber-500 hover:bg-amber-600 text-white font-medium px-3 py-1.5 rounded-lg transition"
                             >
                               Suspend
@@ -176,7 +194,7 @@ const AdminUsersPage = () => {
                           )}
 
                           <button
-                            onClick={() => deleteUser(user._id)}
+                            onClick={() => deleteUser(user._id, user.name)}
                             className="text-xs bg-rose-600 hover:bg-rose-700 text-white font-medium px-3 py-1.5 rounded-lg transition"
                           >
                             Delete

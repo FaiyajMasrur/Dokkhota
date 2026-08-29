@@ -3,7 +3,7 @@ const SkillRequest = require('../models/SkillRequest');
 
 const createRequest = async (req, res, next) => {
   try {
-    const { title, category, description, preferredFormat, preferredBudget, tags } = req.body;
+    const { title, category, description, currentLevel, preferredFormat, preferredBudget, availableTimeSlots, tags } = req.body;
     if (!title || !category || !description) {
       return res.status(400).json({ success: false, message: 'Title, category, and description are required' });
     }
@@ -13,8 +13,10 @@ const createRequest = async (req, res, next) => {
       title: title.trim(),
       category: category.trim(),
       description: description.trim(),
+      currentLevel: currentLevel || 'beginner',
       preferredFormat: preferredFormat || 'online',
       preferredBudget: Number(preferredBudget || 0),
+      availableTimeSlots: (availableTimeSlots || '').trim(),
       tags: (tags || []).map((tag) => tag.trim()).filter(Boolean),
     });
 

@@ -3,7 +3,7 @@ const Notification = require("../models/Notification");
 /**
  * Creates a notification in DB and optionally emits it via Socket.IO
  */
-const createNotification = async ({ userId, title, message, type = "booking", io = null }) => {
+const createNotification = async ({ userId, title, message, type = "booking", link = "", bookingId = null, io = null }) => {
   try {
     if (!userId || !title || !message) return null;
 
@@ -12,6 +12,8 @@ const createNotification = async ({ userId, title, message, type = "booking", io
       title,
       message,
       type,
+      link,
+      bookingId,
       isRead: false,
     });
 

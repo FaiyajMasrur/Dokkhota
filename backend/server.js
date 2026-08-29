@@ -90,6 +90,9 @@ app.use("/api/admin", adminRoutes);
 
 app.use(errorHandler);
 
+const { initReminderScheduler } = require("./utils/reminderHelper");
+initReminderScheduler(io);
+
 io.on("connection", (socket) => {
   socketHandler(io, socket);
 });

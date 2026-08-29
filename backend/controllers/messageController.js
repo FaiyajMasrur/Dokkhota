@@ -135,8 +135,66 @@ const sendMessage = async (req, res, next) => {
   }
 };
 
+// ── Add/Toggle emoji reaction on a message ─────────────────────────────
+const reactToMessage = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { messageId } = req.params;
+    const { emoji } = req.body;
+
+    if (!emoji) {
+      return res.status(400).json({ success: false, message: 'Emoji is required' });
+    }
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      return res.status(404).json({ success: false, message: 'Message not found' });
+    }
+
+    // Check if user is sender or receiver of this message
+    const isParticipant =
+      message.senderId.toString() === userId || message.receiverId.toString() === userId;
+    if (!isParticipant) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    // Toggle reaction if exact same emoji by same user exists
+    const existingIndex = (message.reactions || []).findIndex(
+      (r) => r.userId.toString() === userId && r.emoji === emoji
+    );
+
+    if (existingIndex > -1) {
+      message.reactions.splice(existingIndex, 1);
+    } else {
+      if (!message.reactions) message.reactions = [];
+      message.reactions.push({ emoji, userId, createdAt: new Date() });
+    }
+
+    await message.save();
+    await message.populate('senderId', 'name avatarUrl');
+    await message.populate('receiverId', 'name avatarUrl');
+
+    const io = req.app.get('io');
+    if (io) {
+      const otherUserId =
+        message.senderId._id.toString() === userId
+          ? message.receiverId._id.toString()
+          : message.senderId._id.toString();
+      io.to(otherUserId).emit('message_reaction', {
+        messageId: message._id,
+        reactions: message.reactions,
+      });
+    }
+
+    return res.status(200).json({ success: true, message });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 module.exports = {
   getConversations,
   getMessages,
   sendMessage,
+  reactToMessage,
 };

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import notificationService from "../services/notificationService.js";
 
 const NotificationsPage = () => {
@@ -158,10 +159,12 @@ const NotificationsPage = () => {
                             ? "bg-purple-100 text-purple-800"
                             : item.type === "message"
                             ? "bg-blue-100 text-blue-800"
+                            : item.type === "call"
+                            ? "bg-rose-100 text-rose-800 font-bold"
                             : "bg-emerald-100 text-emerald-800"
                         }`}
                       >
-                        {item.type || "booking"}
+                        {item.type === "call" ? "📞 Call" : item.type || "booking"}
                       </span>
                       <h2 className="font-semibold text-slate-800 text-base">{item.title}</h2>
                     </div>
@@ -174,10 +177,20 @@ const NotificationsPage = () => {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {(item.link || item.type === 'call') && (
+                      <Link
+                        to={item.link || `/session/${item.bookingId || ''}`}
+                        onClick={() => markRead(item._id)}
+                        className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm"
+                      >
+                        <span>📞</span>
+                        <span>Join Call</span>
+                      </Link>
+                    )}
                     {!item.isRead && (
                       <button
                         onClick={() => markRead(item._id)}
-                        className="text-xs bg-emerald-600 text-white font-medium px-3 py-1.5 rounded-lg hover:bg-emerald-700 transition"
+                        className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-3 py-1.5 rounded-lg transition"
                       >
                         Mark as Read
                       </button>

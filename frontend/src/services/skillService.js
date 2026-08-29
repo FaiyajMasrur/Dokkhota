@@ -23,9 +23,19 @@ const skillService = {
       headers: { Authorization: `Bearer ${token}` },
     });
   },
+  async deleteListing(listingId, token) {
+    return api.delete(`/skills/${listingId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  },
   async getMyListings(token) {
     return api.get('/skills/my', {
       headers: { Authorization: `Bearer ${token}` },
+    });
+  },
+  async getRecommendedListings(token) {
+    return api.get('/skills/recommended', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
   },
 };

@@ -1,9 +1,10 @@
-// Category controller for Dokkhota categories
 const Category = require('../models/Category');
+const SkillListing = require('../models/SkillListing');
 
 const listCategories = async (req, res, next) => {
   try {
-    const categories = await Category.find({ isActive: true }).sort({ name: 1 });
+    const filter = req.query.all === 'true' ? {} : { isActive: true };
+    const categories = await Category.find(filter).sort({ name: 1 });
     return res.status(200).json({ success: true, categories });
   } catch (error) {
     return next(error);
@@ -37,8 +38,22 @@ const updateCategory = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Category not found' });
     }
 
+    const oldName = category.name;
     const { name, description, isActive } = req.body;
-    if (name !== undefined) category.name = name.trim();
+
+    if (name !== undefined && name.trim()) {
+      const newName = name.trim();
+      category.name = newName;
+
+      // Propagate rename to all existing listings under this category
+      if (oldName !== newName) {
+        await SkillListing.updateMany(
+          { category: oldName },
+          { category: newName }
+        );
+      }
+    }
+
     if (description !== undefined) category.description = description.trim();
     if (isActive !== undefined) category.isActive = isActive;
 
@@ -49,8 +64,21 @@ const updateCategory = async (req, res, next) => {
   }
 };
 
+const deleteCategory = async (req, res, next) => {
+  try {
+    const category = await Category.findByIdAndDelete(req.params.categoryId);
+    if (!category) {
+      return res.status(404).json({ success: false, message: 'Category not found' });
+    }
+    return res.status(200).json({ success: true, message: 'Category deleted' });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 module.exports = {
   listCategories,
   createCategory,
   updateCategory,
+  deleteCategory,
 };

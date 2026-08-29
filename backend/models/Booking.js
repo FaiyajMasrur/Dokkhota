@@ -11,11 +11,16 @@ const bookingSchema = new mongoose.Schema(
     message: { type: String, default: '' },
     status: {
       type: String,
-      enum: ['pending', 'accepted', 'rejected', 'cancelled', 'completed'],
+      enum: ['pending', 'accepted', 'rejected', 'cancelled', 'completed', 'no-show'],
       default: 'pending',
     },
     creditCost: { type: Number, required: true, min: 1 },
     heldCredits: { type: Number, default: 0 },
+    penaltyAmount: { type: Number, default: 0 },
+    cancellationReason: { type: String, default: '' },
+    cancelledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    reminderSent24h: { type: Boolean, default: false },
+    reminderSent30m: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

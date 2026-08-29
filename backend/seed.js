@@ -94,12 +94,13 @@ const runSeed = async () => {
         await user.save();
         console.log(`Created user: ${user.name} (${user.email})`);
       } else {
+        user.passwordHash = defaultPassword;
         user.creditBalance = uData.creditBalance;
         user.isVerified = true;
         user.role = uData.role;
         user.streakCount = uData.streakCount;
         await user.save();
-        console.log(`Updated user: ${user.name} (${user.email})`);
+        console.log(`Updated user & password: ${user.name} (${user.email})`);
       }
       usersMap[user.name] = user;
     }

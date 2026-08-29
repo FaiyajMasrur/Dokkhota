@@ -1,10 +1,10 @@
-// Public profile page for Dokkhota — Features 9 & 10: Reviews display + Badge submission & display
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import userService from '../services/userService.js';
 import reviewService from '../services/reviewService.js';
 import badgeService from '../services/badgeService.js';
+import ReportModal from '../components/ReportModal.jsx';
 
 const ProfilePage = () => {
   const { userId } = useParams();
@@ -26,6 +26,7 @@ const ProfilePage = () => {
   const [badgeFile, setBadgeFile] = useState(null);
   const [badgeSubmitting, setBadgeSubmitting] = useState(false);
   const [badgeMsg, setBadgeMsg] = useState(null);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   const isOwnProfile = isAuthenticated && (currentUser?.id === userId || currentUser?._id === userId);
 
@@ -124,28 +125,65 @@ const ProfilePage = () => {
       <div className='max-w-5xl mx-auto px-4 py-10'>
         <div className='bg-white p-8 rounded-3xl shadow-sm'>
           <div className='flex items-center justify-between gap-4 mb-6'>
-            <div className='flex items-center gap-3'>
-              <h1 className='text-3xl font-semibold'>{profile.name}</h1>
+            <div className='flex flex-wrap items-center gap-3'>
+              <h1 className='text-3xl font-bold text-slate-800'>{profile.name}</h1>
               {profile.isVerified && (
                 <span className='bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1'>
                   ✓ Verified
                 </span>
               )}
+              {profile.streakCount > 0 && (
+                <span className='bg-orange-100 text-orange-800 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-sm'>
+                  🔥 {profile.streakCount}-Week Streak
+                </span>
+              )}
             </div>
-            {isOwnProfile && (
-              <Link to='/profile/edit' className='bg-green-600 text-white rounded-full px-5 py-3 hover:bg-green-700'>Edit profile</Link>
-            )}
+            <div className='flex items-center gap-3'>
+              {isOwnProfile ? (
+                <Link to='/profile/edit' className='bg-emerald-600 text-white rounded-full px-5 py-2.5 hover:bg-emerald-700 font-medium transition shadow-sm text-sm'>
+                  Edit profile
+                </Link>
+              ) : (
+                <button
+                  type='button'
+                  onClick={() => setIsReportModalOpen(true)}
+                  className='text-xs font-semibold px-4 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 transition'
+                >
+                  🚩 Report User
+                </button>
+              )}
+            </div>
           </div>
+
+          <ReportModal
+            isOpen={isReportModalOpen}
+            onClose={() => setIsReportModalOpen(false)}
+            targetType='user'
+            targetId={profile._id}
+            reportedUserId={profile._id}
+            title={`Report ${profile.name}`}
+          />
           <div className='flex flex-col md:flex-row gap-6'>
             <div className='w-full md:w-1/3'>
-              <div className='bg-gray-100 rounded-3xl p-6 text-center'>
-                <div className='text-4xl font-bold text-green-700 mb-4'>{profile.name?.charAt(0)}</div>
-                <h2 className='text-2xl font-semibold'>{profile.name}</h2>
-                <p className='text-gray-600'>{profile.city || 'Unknown city'}</p>
+              <div className='bg-slate-50 rounded-3xl p-6 text-center border border-slate-100'>
+                <div className='w-24 h-24 rounded-full bg-emerald-100 text-emerald-700 font-bold text-3xl flex items-center justify-center mx-auto mb-4 overflow-hidden border shadow-sm'>
+                  {profile.avatarUrl ? (
+                    <img src={profile.avatarUrl} alt={profile.name} className='w-full h-full object-cover' />
+                  ) : (
+                    profile.name?.charAt(0) || 'U'
+                  )}
+                </div>
+                <h2 className='text-xl font-bold text-slate-800'>{profile.name}</h2>
+                <p className='text-gray-500 text-sm'>{profile.city || 'Unknown city'}</p>
+                {profile.streakCount > 0 && (
+                  <div className='mt-2 inline-block bg-orange-50 text-orange-700 text-xs font-bold px-3 py-1 rounded-xl border border-orange-200'>
+                    🔥 {profile.streakCount}-Week Teaching Streak
+                  </div>
+                )}
                 {avgRating > 0 && (
                   <div className='mt-3'>
                     <span className='text-lg'>{renderStars(avgRating)}</span>
-                    <p className='text-sm text-gray-500 mt-1'>{avgRating}/5 ({reviews.length} reviews)</p>
+                    <p className='text-xs text-gray-500 mt-1'>{avgRating}/5 ({reviews.length} reviews)</p>
                   </div>
                 )}
               </div>
@@ -153,6 +191,23 @@ const ProfilePage = () => {
             <div className='w-full md:w-2/3'>
               <h2 className='text-2xl font-semibold mb-3'>About</h2>
               <p className='text-gray-700 mb-4'>{profile.bio || 'No bio available yet.'}</p>
+              
+              {/* Skills Wanted / Learning Goals */}
+              {profile.skillsWanted?.length > 0 && (
+                <div className='mb-5 p-4 bg-emerald-50/60 rounded-2xl border border-emerald-100'>
+                  <span className='block text-xs font-bold text-emerald-900 uppercase tracking-wider mb-2'>
+                    🎯 Wants to Learn
+                  </span>
+                  <div className='flex flex-wrap gap-2'>
+                    {profile.skillsWanted.map((s, idx) => (
+                      <span key={idx} className='bg-white text-emerald-800 border border-emerald-200 text-xs font-medium px-3 py-1 rounded-full shadow-xs'>
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className='grid gap-4 md:grid-cols-3'>
                 <div className='bg-slate-50 rounded-3xl p-5'>
                   <span className='block text-sm text-gray-500'>Credits</span>

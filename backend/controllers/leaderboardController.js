@@ -1,15 +1,33 @@
 const User = require("../models/User");
 const Review = require("../models/Review");
 const Booking = require("../models/Booking");
+const SkillListing = require("../models/SkillListing");
 
 exports.getLeaderboard = async (req, res) => {
   try {
     const { sortBy = "rating", category } = req.query;
 
-    // Fetch all non-admin users
+    let userFilter = { role: "user" };
+
+    if (category && category.trim()) {
+      const cleanCat = category.trim();
+      const matchingTeachers = await SkillListing.find({
+        category: new RegExp(`^${cleanCat}$`, "i"),
+      }).distinct("teacherId");
+
+      userFilter = {
+        role: "user",
+        $or: [
+          { _id: { $in: matchingTeachers } },
+          { "skillsOffered.category": new RegExp(`^${cleanCat}$`, "i") },
+        ],
+      };
+    }
+
+    // Fetch matching non-admin users
     const users = await User.find(
-      { role: "user" },
-      "name email avatarUrl creditBalance isVerified streakCount bio city"
+      userFilter,
+      "name email avatarUrl creditBalance isVerified streakCount bio city skillsOffered"
     ).lean();
 
     // Fetch review metrics for each user

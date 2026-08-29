@@ -70,3 +70,19 @@ npm run dev
 - [x] JWT access + refresh tokens with auth and role middleware
 - [x] Password reset via email token (1-hour expiry)
 - [x] Skill listing CRUD with availability
+
+---
+
+## Project Status
+
+- **Completed:** This repository reflects the completed Dokkhota project after four development sprints.
+- **Sprints:** 4 (planning, core implementation, polish & testing, final fixes & deployment prep)
+
+See the changelog for detailed sprint summaries: [CHANGELOG.md](CHANGELOG.md)
+
+---
+
+## Contributing / Deployment
+
+- If you plan to run or contribute, follow the Quickstart above and open issues or PRs against the `main` branch.
+- For release history and sprint notes, consult [CHANGELOG.md](CHANGELOG.md).

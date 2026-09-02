@@ -1,14 +1,29 @@
+# Dependencies
 node_modules/
-/.env
-backend/node_modules/
-frontend/node_modules/
-dist/
-.DS_Store
-*.log
+*/node_modules/
+**/node_modules/
+
+# Environment files (exclude template .env.example)
+.env
 .env.local
 .env.development
+.env.test
 .env.production
+backend/.env
+frontend/.env
+**/.env
+**/.env.local
+**/.env.development
+**/.env.production
+
+# Build and runtime outputs
+dist/
+build/
 coverage/
-/.vite
-*.tgz
+.vite/
 backend/uploads/
+
+# Logs and OS files
+*.log
+.DS_Store
+Thumbs.db

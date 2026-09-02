@@ -2,8 +2,9 @@
 
 Frontend client application built with React, Vite, and Tailwind CSS for the Dokkhota peer-to-peer skill exchange platform.
 
-## Completed Features (Sprint 3)
-- **Credit Balance and Transaction History**: Ledger table, starter bonuses, session completion earnings (+10 SC), refunds, and spendings (`CreditHistoryPage.jsx`, `creditController.js`).
-- **Booking Requests Between Users**: Complete booking flow between learners and skill providers, request submission, acceptance, cancellation, and completion (`BookSessionPage.jsx`, `bookingController.js`).
-- **Skill Verification Badge**: Verification checkmark badges (`<VerificationBadge />`) displayed across verified teacher profiles, skill listings, leaderboard, and admin badge management (`VerificationBadge.jsx`, `AdminBadgesPage.jsx`).
-- **Session History Log for both Teacher and Learner**: Unified log table with exact columns `Role | Skill Offered | Partner | Date & Time | Credits | Status | Actions` with direct 1-click status controls (`SessionHistoryPage.jsx`, `sessionHistoryController.js`).
+## Completed Features (Sprint 3: Features 11-15)
+- **Feature 11**: Admin Dashboard for User Management & Dispute Resolution
+- **Feature 12**: Credit Transaction History Log (+10 SC per session)
+- **Feature 13**: Notification System (Booking Reminders, Real-time Updates, Credit Alerts)
+- **Feature 14**: Session History Log for Teachers & Learners
+- **Feature 15**: Leaderboard of Top-Rated Skill Providers

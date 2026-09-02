@@ -1,9 +1,8 @@
-// Credit controller for Dokkhota user balance and transactions
 
 const User = require("../models/User");
 const CreditTransaction = require("../models/CreditTransaction");
 
-// Get current user's credit balance
+//  credit balance
 const getCreditBalance = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id).select(
@@ -28,7 +27,7 @@ const getCreditBalance = async (req, res, next) => {
   }
 };
 
-// Get current user's credit transaction history
+// credit transaction history
 const listTransactions = async (req, res, next) => {
   try {
     const transactions = await CreditTransaction.find({

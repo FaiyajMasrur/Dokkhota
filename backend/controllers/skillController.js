@@ -1,4 +1,4 @@
-// Skill listing controller for Dokkhota skill creation, retrieval, and search.
+
 const SkillListing = require('../models/SkillListing');
 
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -193,7 +193,7 @@ const getRecommendedListings = async (req, res, next) => {
       }
     }
 
-    // Exclude current user's listings and inactive listings
+    //Exclude current user's listings and inactive listings
     const query = { isActive: true };
     if (userId) {
       query.teacherId = { $ne: userId };
@@ -222,7 +222,7 @@ const getRecommendedListings = async (req, res, next) => {
       });
     }
 
-    // Score each listing based on user's skillsWanted
+    //Score each listing based on user's skillsWanted
     const scored = allListings.map((listing) => {
       let score = 0;
       const matched = [];
@@ -259,19 +259,19 @@ const getRecommendedListings = async (req, res, next) => {
         }
       });
 
-      // Provider rating boost
+      //Provider rating boost
       score += (listing.averageRating || 4.5) * 3;
 
-      // Provider streak boost
+      //Provider streak boost
       const streak = listing.teacherId?.streakCount || 0;
       score += Math.min(streak, 5) * 2;
 
-      // Verified provider boost
+      //Verified provider boost
       if (listing.teacherId?.isVerified) {
         score += 5;
       }
 
-      // Convert score to a percentage representation
+      //Convert score to a percentage representation
       const matchPercentage = Math.min(Math.round((score / 100) * 100), 99);
 
       return {

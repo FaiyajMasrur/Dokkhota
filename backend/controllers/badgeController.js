@@ -1,10 +1,9 @@
-// Badge controller for Dokkhota skill verification badge system (Feature 10)
 const SkillBadge = require('../models/SkillBadge');
 const User = require('../models/User');
 const multer = require('multer');
 const path = require('path');
 
-// ── Multer config for proof file uploads ─────────────────────────────
+// Multer config for proof file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, path.join(__dirname, '..', 'uploads')),
   filename: (req, file, cb) => {
@@ -27,7 +26,7 @@ const upload = multer({
 
 const uploadProof = upload.single('proof');
 
-// ── User submits a badge request ─────────────────────────────────────
+//Badge Req Submit
 const submitBadgeRequest = async (req, res, next) => {
   try {
     const { skillName, description, proofType } = req.body;
@@ -54,7 +53,7 @@ const submitBadgeRequest = async (req, res, next) => {
   }
 };
 
-// ── Get current user's badge requests ────────────────────────────────
+// badge req user
 const getMyBadges = async (req, res, next) => {
   try {
     const badges = await SkillBadge.find({ userId: req.user.id })
@@ -66,7 +65,7 @@ const getMyBadges = async (req, res, next) => {
   }
 };
 
-// ── Get a specific user's approved badges (public) ───────────────────
+//approved badges > sp user
 const getUserBadges = async (req, res, next) => {
   try {
     const badges = await SkillBadge.find({
@@ -79,8 +78,8 @@ const getUserBadges = async (req, res, next) => {
     return next(error);
   }
 };
+//Pending Req >Admin
 
-// ── Admin: Get all pending badge requests ────────────────────────────
 const getPendingBadges = async (req, res, next) => {
   try {
     if (req.user.role !== 'admin') {
@@ -97,7 +96,7 @@ const getPendingBadges = async (req, res, next) => {
   }
 };
 
-// ── Admin: Get all badge requests (any status) ───────────────────────
+//Badge_Req_Get>Admin
 const getAllBadges = async (req, res, next) => {
   try {
     if (req.user.role !== 'admin') {
@@ -114,7 +113,7 @@ const getAllBadges = async (req, res, next) => {
   }
 };
 
-// ── Admin: Approve or reject a badge ─────────────────────────────────
+//Badge Acc/Rej
 const reviewBadge = async (req, res, next) => {
   try {
     if (req.user.role !== 'admin') {
@@ -139,7 +138,7 @@ const reviewBadge = async (req, res, next) => {
     badge.reviewedAt = new Date();
     await badge.save();
 
-    // If approved, mark user as verified
+    //Verific...
     if (status === 'approved') {
       await User.findByIdAndUpdate(badge.userId, { isVerified: true });
     }

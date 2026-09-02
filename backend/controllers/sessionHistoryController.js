@@ -1,12 +1,12 @@
 const Booking = require("../models/Booking");
 const Session = require("../models/Session");
 
-// Get session history log for the logged-in user (as teacher or learner)
+//session history log for user
 exports.getSessionHistory = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Fetch all bookings for the user
+    //Fetch all bookings 
     const bookings = await Booking.find({
       $or: [{ teacherId: userId }, { studentId: userId }],
     })
@@ -15,7 +15,7 @@ exports.getSessionHistory = async (req, res) => {
       .populate("listingId", "title category creditCost")
       .sort({ createdAt: -1 });
 
-    // Format bookings into clean session history entries
+    //Format bookings into clean session history entries
     const sessions = bookings.map((b) => {
       const isTeacher = b.teacherId?._id?.toString() === userId || b.teacherId?.toString() === userId;
       return {

@@ -1,4 +1,3 @@
-// Review model for Dokkhota rating & review system (Feature 9)
 const mongoose = require('mongoose');
 
 const reviewSchema = new mongoose.Schema(

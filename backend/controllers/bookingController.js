@@ -7,10 +7,9 @@ const Session = require("../models/Session");
 const { createNotification } = require("../utils/notificationHelper");
 const { sendEmail } = require("../config/email");
 
-// ── Cancellation window in hours ───────────────────────────────────────
+//Cancellation window in hours 
 const CANCELLATION_WINDOW_HOURS = Number(process.env.CANCELLATION_WINDOW_HOURS || 2);
 
-// ── Valid status transitions (state machine) ───────────────────────────
 const VALID_TRANSITIONS = {
   pending: ["accepted", "rejected", "cancelled"],
   accepted: ["cancelled", "completed", "no-show"],
@@ -20,7 +19,6 @@ const VALID_TRANSITIONS = {
   "no-show": [],
 };
 
-// ── Who is allowed to trigger each transition ──────────────────────────
 const TRANSITION_PERMISSIONS = {
   accepted: "teacher",
   rejected: "teacher",
@@ -29,7 +27,7 @@ const TRANSITION_PERMISSIONS = {
   "no-show": "both",
 };
 
-// ── Helper to calculate hours until session ────────────────────────────
+//Helper for  calculatation of  hours till session
 const getHoursUntilSession = (dateStr, timeStr) => {
   try {
     const sessionDateTime = new Date(`${dateStr} ${timeStr || "00:00"}`);
@@ -40,7 +38,7 @@ const getHoursUntilSession = (dateStr, timeStr) => {
   }
 };
 
-// ── Create a new booking ───────────────────────────────────────────────
+//New Booking
 const createBooking = async (req, res, next) => {
   try {
     const { listingId, preferredDate, preferredTime, message } = req.body;
@@ -79,12 +77,12 @@ const createBooking = async (req, res, next) => {
 
     await booking.save();
 
-    // Hold student's credits
+    //STUDENT CREDIT
     student.creditBalance -= listing.creditCost;
     student.heldCredits += listing.creditCost;
     await student.save();
 
-    // Log the hold transaction
+    //HOLD TRANS
     await CreditTransaction.create({
       userId: student._id,
       type: "hold",
@@ -93,7 +91,7 @@ const createBooking = async (req, res, next) => {
       description: `Credits held for session "${listing.title}" on ${preferredDate}`,
     });
 
-    // Send notification to teacher
+    //NOTIFICATION OF REQUEST TO TEACHER
     const io = req.app.get("io");
     await createNotification({
       userId: listing.teacherId,
@@ -111,7 +109,7 @@ const createBooking = async (req, res, next) => {
   }
 };
 
-// ── List all bookings for the logged-in user ───────────────────────────
+//ALL BOOKINGS OF USER
 const listBookings = async (req, res, next) => {
   try {
     const bookings = await Booking.find({
@@ -128,7 +126,7 @@ const listBookings = async (req, res, next) => {
   }
 };
 
-// ── Update booking status (accept / reject / cancel / complete / no-show) ──
+//Update booking status e.g accept / reject / cancel / complete ..
 const updateBookingStatus = async (req, res, next) => {
   try {
     const booking = await Booking.findById(req.params.bookingId).populate("listingId");
@@ -179,7 +177,7 @@ const updateBookingStatus = async (req, res, next) => {
       booking.cancelledBy = req.user.id;
     }
 
-    // ── 1. ACCEPTED: Confirm session and send confirmation email ─────
+    //ACCEPTED: Confirm session and send confirmation email
     if (status === "accepted") {
       await createNotification({
         userId: booking.studentId,
@@ -191,7 +189,7 @@ const updateBookingStatus = async (req, res, next) => {
         io,
       });
 
-      // Send email confirmation
+      //Send email confirmation
       try {
         if (student?.email) {
           const emailHtml = `
@@ -210,7 +208,7 @@ const updateBookingStatus = async (req, res, next) => {
       }
     }
 
-    // ── 2. REJECTED: Full refund to student ─────────────────────────
+    // REJECTED: Full refund to student 
     if (status === "rejected") {
       if (booking.heldCredits > 0 && student) {
         student.creditBalance += booking.heldCredits;
@@ -238,7 +236,7 @@ const updateBookingStatus = async (req, res, next) => {
       });
     }
 
-    // ── 3. CANCELLED: Check cancellation window & apply penalty ─────
+    //CANCELLED: Check cancellation window & apply penalty 
     if (status === "cancelled") {
       const held = booking.heldCredits;
       if (held > 0 && student && teacher) {
@@ -246,7 +244,7 @@ const updateBookingStatus = async (req, res, next) => {
         const isLateCancelByStudent = isStudent && hoursUntil < CANCELLATION_WINDOW_HOURS;
 
         if (isLateCancelByStudent) {
-          // Late cancellation penalty: 50% penalty paid to teacher
+          //Late cancellation penalty> 50% penalty paid to teacher
           const penalty = Math.ceil(held * 0.5);
           const refundAmount = held - penalty;
 
@@ -285,7 +283,7 @@ const updateBookingStatus = async (req, res, next) => {
             description: `Compensation (${penalty} SC) for late cancellation of session "${skillTitle}" by learner`,
           });
         } else {
-          // Normal cancellation (by teacher or by student > window): 100% full refund
+          //Normal cancellation (by teacher or by student > window): 100% full refund
           student.creditBalance += held;
           student.heldCredits -= held;
           await student.save();
@@ -302,7 +300,7 @@ const updateBookingStatus = async (req, res, next) => {
         booking.heldCredits = 0;
       }
 
-      // Notify the other party
+      //Notify  other party
       const notifyUserId = isTeacher ? booking.studentId : booking.teacherId;
       const notifyUserRole = isTeacher ? "Teacher" : "Student";
       await createNotification({
@@ -315,12 +313,12 @@ const updateBookingStatus = async (req, res, next) => {
       });
     }
 
-    // ── 4. NO-SHOW: Handle no-show situations ───────────────────────
+    //NO-SHOW: Handle no-show situations 
     if (status === "no-show") {
       const held = booking.heldCredits;
       if (held > 0 && student && teacher) {
         if (isStudent) {
-          // Learner reported teacher no-show: 100% refund to learner
+          //If Learner reported teacher no-show >>>100% refund to learner
           student.creditBalance += held;
           student.heldCredits -= held;
           await student.save();
@@ -342,7 +340,7 @@ const updateBookingStatus = async (req, res, next) => {
             io,
           });
         } else {
-          // Teacher reported learner no-show: transfer credits to teacher as session slot was held
+          // Teacher reported learner no-show>>>transfer credits to teacher as session slot was held
           student.heldCredits -= held;
           await student.save();
 
@@ -379,7 +377,7 @@ const updateBookingStatus = async (req, res, next) => {
       }
     }
 
-    // ── 5. COMPLETED: Transfer credits and sync session log ─────────
+    // COMPLETED: Transfer credits and sync session log 
     if (status === "completed") {
       const amount = booking.heldCredits;
       if (amount > 0 && student && teacher) {
@@ -405,7 +403,7 @@ const updateBookingStatus = async (req, res, next) => {
           description: `Session completed — ${amount} credits earned teaching "${skillTitle}"`,
         });
 
-        // ── 5.1 Calculate & Update Teacher Teaching Streak (FR-29) ───
+        //  Calculate & Update Teacher Teaching Streak (FR-29)
         const now = new Date();
         const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
         
@@ -438,7 +436,7 @@ const updateBookingStatus = async (req, res, next) => {
 
         await teacher.save();
 
-        // ── 5.2 Milestone Badges (3, 5, 10 weeks) ───────────────────
+        // Milestone Badges (3, 5, 10 weeks) 
         const streak = teacher.streakCount;
         const milestones = [
           { count: 3, name: "Bronze Mentor (3-Week Streak)", desc: "Maintained a 3-week consecutive teaching streak." },
@@ -479,7 +477,7 @@ const updateBookingStatus = async (req, res, next) => {
         booking.heldCredits = 0;
       }
 
-      // Sync Session document for session history compatibility
+      //Sync
       try {
         await Session.create({
           teacherId: booking.teacherId,
@@ -492,7 +490,7 @@ const updateBookingStatus = async (req, res, next) => {
         console.warn("Session sync warning:", e.message);
       }
 
-      // Notify both parties
+      //NOTIFY BOTH
       await createNotification({
         userId: booking.studentId,
         title: "Session Completed",

@@ -1,6 +1,6 @@
 const CreditTransaction = require("../models/CreditTransaction");
 
-// Get credit transaction history for the logged-in user
+
 const getMyCreditTransactions = async (req, res, next) => {
   try {
     const transactions = await CreditTransaction.find({

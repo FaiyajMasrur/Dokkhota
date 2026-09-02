@@ -1,0 +1,30 @@
+=================================================================================
+CSE 470: Software Quality Assurance — Backend Unit Testing Integration
+Student ID: 24101430
+Feature: Credit Transaction History & Balance Management
+Date: 28 August 2026
+=================================================================================
+
+> dokkhota-backend@1.0.0 test
+> jest tests/24101430_credit_transaction_history.test.js --runInBand --detectOpenHandles --forceExit
+
+PASS tests/24101430_credit_transaction_history.test.js
+  Feature: Credit Transaction History & Balance Management (Student ID: 24101430)
+    Case A: Positive Flow (Happy Path)
+      ✓ Test 1: Retrieve User Credit Balance (GET /api/credits/balance) (15 ms)
+      ✓ Test 2: Retrieve Credit Transaction History Log (GET /api/credits/transactions) (9 ms)
+    Case B: Negative Flow (Error Handling)
+      ✓ Test 3: Validation Error on Invalid Payload (POST /api/bookings) (6 ms)
+      ✓ Test 4: Resource Not Found (GET /api/credits/non-existent-endpoint) (6 ms)
+    Case C: Security & Boundary
+      ✓ Test 5: Unauthorized Access without Token (GET /api/credits/balance) (4 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        2.605 s
+Ran all test suites matching /tests\24101430_credit_transaction_history.test.js/i.
+
+=================================================================================
+ALL 5 TEST CASES PASSED WITH 100% SUCCESSFUL RESPONSE VERIFICATION (GREEN TICKS ✓)
+=================================================================================

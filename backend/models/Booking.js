@@ -1,4 +1,3 @@
-// Booking model for Dokkhota session requests
 const mongoose = require('mongoose');
 
 const bookingSchema = new mongoose.Schema(

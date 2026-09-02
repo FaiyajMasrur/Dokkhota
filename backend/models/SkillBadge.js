@@ -1,5 +1,3 @@
-// SkillBadge model for Dokkhota verification badge system (Feature 10)
-// Users submit proof of expertise; admins approve/reject for verified badge
 const mongoose = require('mongoose');
 
 const skillBadgeSchema = new mongoose.Schema(

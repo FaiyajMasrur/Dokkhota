@@ -1,4 +1,3 @@
-// Credit transaction ledger model for Dokkhota users
 const mongoose = require('mongoose');
 
 const creditTransactionSchema = new mongoose.Schema(

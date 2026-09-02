@@ -21,7 +21,6 @@ const creditRoutes = require("./routes/creditRoutes");
 const bookingRoutes = require("./routes/bookingRoutes");
 const requestRoutes = require("./routes/requestRoutes");
 
-
 const messageRoutes = require("./routes/messageRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const badgeRoutes = require("./routes/badgeRoutes");
@@ -97,22 +96,26 @@ io.on("connection", (socket) => {
   socketHandler(io, socket);
 });
 
-const requestedPort = Number(process.env.PORT || 5000);
+if (process.env.NODE_ENV !== "test") {
+  const requestedPort = Number(process.env.PORT || 5000);
 
-const tryListen = (port) => {
-  server.once("error", (error) => {
-    if (error.code === "EADDRINUSE") {
-      const fallbackPort = port + 1;
-      console.warn(`Port ${port} is already in use. Trying ${fallbackPort} instead.`);
-      tryListen(fallbackPort);
-      return;
-    }
-    throw error;
-  });
+  const tryListen = (port) => {
+    server.once("error", (error) => {
+      if (error.code === "EADDRINUSE") {
+        const fallbackPort = port + 1;
+        console.warn(`Port ${port} is already in use. Trying ${fallbackPort} instead.`);
+        tryListen(fallbackPort);
+        return;
+      }
+      throw error;
+    });
 
-  server.listen(port, () => {
-    console.log(`Dokkhota backend running on port ${port}`);
-  });
-};
+    server.listen(port, () => {
+      console.log(`Dokkhota backend running on port ${port}`);
+    });
+  };
 
-tryListen(requestedPort);
+  tryListen(requestedPort);
+}
+
+module.exports = app;

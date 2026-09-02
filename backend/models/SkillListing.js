@@ -1,4 +1,3 @@
-// Skill listing model for Dokkhota listings and teacher offerings
 const mongoose = require('mongoose');
 
 const skillListingSchema = new mongoose.Schema(
